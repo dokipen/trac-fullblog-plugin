@@ -1,0 +1,28 @@
+# -*- coding: utf-8 -*-
+"""
+Trac plugin proving a full-featured, self-contained Blog.
+
+License: BSD
+
+(c) 2007 ::: www.CodeResort.com - BV Network AS (simon-code@bvnetwork.no)
+"""
+
+from setuptools import setup
+
+setup(name='TracFullBlogPlugin',
+      version='0.1',
+      packages=['tracfullblog'],
+      author='CodeResort.com = BV Network AS',
+      author_email='simon-code@bvnetwork.no',
+      keywords='trac blog',
+      description='Full-featured and self-contained Blog plugin for Trac.',
+      url='http://trac-hacks.org/wiki/FullBlogPlugin',
+      license='BSD',
+      zip_safe = False,
+      entry_points={'trac.plugins': [
+            'tracfullblog.admin = tracfullblog.admin',
+            'tracfullblog.core = tracfullblog.core',
+            'tracfullblog.db = tracfullblog.db',
+            'tracfullblog.web_ui = tracfullblog.web_ui']},
+      package_data={'tracfullblog' : ['htdocs/css/*.css','htdocs/js/*.js', 'templates/*.html', ]},
+      install_requires = [])

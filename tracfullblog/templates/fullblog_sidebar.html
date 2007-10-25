@@ -1,0 +1,60 @@
+<div xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      py:strip="True">
+
+  <div id="sidebar">
+
+    <p py:if="not (defined('blog_about') and blog_about.version)">
+      This blog does not yet have an 'About' post.
+      <a py:if="'BLOG_CREATE' in perm"
+          href="${req.href.blog('create', name='about')}">
+        Create 'About' post.
+      </a> 
+    </p>
+    <p py:if="defined('blog_about') and blog_about.version">
+      <a href="${req.href.blog('view', 'about')}">${blog_about.title}</a>
+    </p>
+
+    <hr />
+    <py:if test="blog_months">
+      <p>Browse by time:</p>
+      <ul>
+        <li py:for="month, count in blog_months">
+          <a href="${req.href.blog(month[0], month[1])}"
+            >${datetime(month[0], month[1], 1).strftime('%B %Y')}</a> (${count})</li>
+      </ul>
+    </py:if>
+    <p py:if="not blog_categories">No posts.</p>
+    
+    <hr />
+    <py:if test="blog_categories">
+      <p>Browse by category:</p>
+      <ul py:if="blog_categories">
+        <li py:for="category, count in blog_categories">
+          <a href="${req.href.blog('category', category)}">${category}</a>
+                (${count})</li>
+      </ul>
+    </py:if>
+    <p py:if="not blog_categories">No categories.</p>
+    
+    <hr />
+    <py:if test="blog_authors">
+      <p>Browse by author:</p>
+      <ul>
+        <li py:for="author, count in blog_authors">
+          <a href="${req.href.blog('author', author)}">${author}</a> (${count})</li>
+      </ul>
+    </py:if>
+    <p py:if="not blog_authors">No authors.</p>
+
+    <hr />
+    <p>Archive: <a href="${req.href.blog('archive')}">All posts</a> (${blog_total})</p>
+    
+    <hr py:if="blog_infotext" />
+    <div id="blog-infotext">
+      ${wiki_to_html(context, blog_infotext)}
+    </div>
+
+  </div>
+
+</div>

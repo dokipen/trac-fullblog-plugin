@@ -1,0 +1,26 @@
+<div xmlns="http://www.w3.org/1999/xhtml"
+     xmlns:py="http://genshi.edgewall.org/" py:strip="True">
+
+  <!--! Macro to render a post -->
+  <div py:def="render_blog_post(post, list_mode=False)">
+    <h1 id="blog-title"><a href="${req.href.blog('view', post.name)}"
+        py:strip="not list_mode">${post.title}</a></h1>
+    <div id="blog-body">
+      ${wiki_to_html(context, post.body)}
+    </div>
+    <p class="metainfo">Posted on: ${format_datetime(post.publish_time, '%Y-%m-%d %H:%M')}
+      -- Last updated: ${format_datetime(post.version_time, '%Y-%m-%d %H:%M')}<br/>
+      Author: <a href="${req.href.blog('author', post.author)}">${post.author}</a><br />
+      Categories: <span py:for="cat in post.category_list" py:if="post.category_list">
+            <a href="${req.href.blog('category', cat)}">${cat}</a>
+            </span>
+            <span py:if="not post.category_list"> (none)</span>
+      <py:if test="list_mode">
+        <br />
+        <a href="${req.href.blog('view', post.name)}">
+            Comments</a> (${len(post.get_comments())})
+      </py:if>
+    </p>
+  </div>
+
+</div>
