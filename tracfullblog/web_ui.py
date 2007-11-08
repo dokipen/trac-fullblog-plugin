@@ -102,8 +102,8 @@ class FullBlogModule(Component):
         data['blog_infotext'] = blog_core.get_bloginfotext()
 
         self.env.log.debug(
-            "Blog debug: command=%s, pagename=%s, path_items=%s" % (
-                command, pagename, str(path_items)))
+            "Blog debug: command=%r, pagename=%r, path_items=%r" % (
+                command, pagename, path_items))
 
         if not command:
             # Request for just root (display latest)
@@ -216,8 +216,8 @@ class FullBlogModule(Component):
                 month = int(path_items[1])
                 from_dt = datetime.datetime(year, month, 1, tzinfo=localtz)
                 to_dt = add_months(from_dt, months=1)
-                title = "Posts for the month of %s %d" % (
-                        from_dt.strftime('%B'), year)
+                title = "Posts for the month of %s" % (
+                        to_unicode(from_dt.strftime('%B %Y')),)
             except ValueError:
                 # Not integers, ignore
                 to_dt = from_dt = None

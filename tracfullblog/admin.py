@@ -38,7 +38,7 @@ class FullBlogAdminPanel(Component):
                     req.args.get('numpostsfront'))
                 self.env.config.save()
             elif req.args.get('savebloginfotext'):
-                self.env.log.debug("New blog info text = %s" % req.args.get('bloginfotext'))
+                self.env.log.debug("New blog info text = %r" % req.args.get('bloginfotext'))
                 is_ok = blog_core.set_bloginfotext(
                         req.args.get('bloginfotext'))
                 if is_ok:

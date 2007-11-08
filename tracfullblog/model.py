@@ -43,7 +43,7 @@ def search_blog_posts(env, terms):
                "FROM fullblog_posts GROUP BY name) bp2 " \
                "WHERE bp1.version = bp2.ver AND bp1.name = bp2.name " \
                "AND " + search_clause
-    env.log.debug("search_blog_posts() SQL: %s" % sql)
+    env.log.debug("search_blog_posts() SQL: %r" % sql)
     cursor.execute(sql, args)
     # Return the items we have found
     return [(row[0], row[1], to_datetime(row[2]), row[3],
@@ -62,7 +62,7 @@ def search_blog_comments(env, terms):
     search_clause, args = search_to_sql(cnx, columns, terms)
     sql = "SELECT name, number, comment, author, time " \
           "FROM fullblog_comments WHERE " + search_clause
-    env.log.debug("search_blog_comments() SQL: %s" % sql)
+    env.log.debug("search_blog_comments() SQL: %r" % sql)
     cursor.execute(sql, args)
     # Return the items we have found
     return [(row[0], row[1], row[2], row[3], to_datetime(row[4]))
@@ -125,8 +125,7 @@ def get_blog_posts(env, category='', author='', from_dt=None, to_dt=None,
                "FROM fullblog_posts bp1 " \
                + join_operation + where_clause \
                + " ORDER BY bp1.publish_time DESC"
-    env.log.debug("get_blog_posts() SQL: %s" % sql)
-    env.log.debug("get_blog_posts() args: %s" % to_unicode(where_values))    
+    env.log.debug("get_blog_posts() SQL: %r (%r)" % (sql, where_values))
     cursor.execute(sql, where_values)
 
     # Return the rows
@@ -160,7 +159,7 @@ def get_blog_comments(env, post_name='', from_dt=None, to_dt=None):
     cursor = cnx.cursor()
     sql = "SELECT name, number, comment, author, time " \
             "FROM fullblog_comments " + where_clause
-    env.log.debug("get_blog_comments() SQL: %s" % sql)
+    env.log.debug("get_blog_comments() SQL: %r (%r)" % (sql, where_values))
     cursor.execute(sql, where_values or None)
 
     # Return the items we have found
@@ -276,10 +275,10 @@ class BlogComment(object):
         cursor = cnx.cursor()
         number = self._next_comment_number()
         if not number:
-            self.env.log.debug("Cannot create comment from '%s' as post '%s' "
+            self.env.log.debug("Cannot create comment from %r as post %r "
                 "does not exist." % (author, self.post_name))
             return False
-        self.env.log.debug("Creating blog comment number %d for '%s'" % (
+        self.env.log.debug("Creating blog comment number %d for %r" % (
                 number, self.post_name))
         cursor.execute("INSERT INTO fullblog_comments "
                 "VALUES (%s, %s, %s, %s, %s)", (self.post_name,
@@ -293,7 +292,7 @@ class BlogComment(object):
             return False
         cnx = self.env.get_db_cnx()
         cursor = cnx.cursor()
-        self.env.log.debug("Deleting blog comment number %d for '%s'" % (
+        self.env.log.debug("Deleting blog comment number %d for %r" % (
                 self.number, self.post_name))
         cursor.execute("DELETE FROM fullblog_comments "
                 "WHERE name=%s AND number=%s",  (
@@ -307,7 +306,7 @@ class BlogComment(object):
         """ Loads a comment from database if found. """
         cnx = self.env.get_db_cnx()
         cursor = cnx.cursor()
-        self.env.log.debug("Fetching blog comment number %d for '%s'" % (
+        self.env.log.debug("Fetching blog comment number %d for %r" % (
                 number, self.post_name))
         cursor.execute("SELECT comment, author, time "
                 "FROM fullblog_comments "
@@ -382,7 +381,7 @@ class BlogPost(object):
                 print 'New version not saved as no changes made.' """
         if not (self.name and self.title and self.body and self.author \
                 and version_author):
-            self.env.log.debug("Cannot create new version of blog entry '%s' "
+            self.env.log.debug("Cannot create new version of blog entry %r "
                 "as name, title, body, author or version_author is missing" % (
                         self.name,) )
             return False
@@ -391,8 +390,8 @@ class BlogPost(object):
         version = 1
         if self.versions:
             version = self.versions[-1] + 1
-        self.env.log.debug("Saving new version %d of blog post '%s' "
-                "from author '%s'" % (version, self.name, version_author))
+        self.env.log.debug("Saving new version %d of blog post %r "
+                "from author %r" % (version, self.name, version_author))
         cnx = self.env.get_db_cnx()
         cursor = cnx.cursor()
         cursor.execute("INSERT INTO fullblog_posts "

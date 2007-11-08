@@ -21,7 +21,7 @@
       <ul>
         <li py:for="month, count in blog_months">
           <a href="${req.href.blog(month[0], month[1])}"
-            >${datetime(month[0], month[1], 1).strftime('%B %Y')}</a> (${count})</li>
+            >${to_unicode(datetime(month[0], month[1], 1).strftime('%B %Y'))}</a> (${count})</li>
       </ul>
     </py:if>
     <p py:if="not blog_categories">No posts.</p>
