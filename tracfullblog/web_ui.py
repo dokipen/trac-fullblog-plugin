@@ -15,7 +15,6 @@ from pkg_resources import resource_filename
 
 # Trac and Genshi imports
 from genshi.builder import tag
-from trac.context import Context
 from trac.core import *
 from trac.search.api import ISearchSource, shorten_result
 from trac.util.datefmt import to_datetime, to_unicode, localtz
@@ -95,7 +94,7 @@ class FullBlogModule(Component):
                 'view', 'edit', 'create', 'archive', 'about']:
             command = 'listing'      # do further parsing later
 
-        data = {'context': Context(self.env, req)}
+        data = {}
 
         template = 'fullblog_view.html'
         data['blog_about'] = BlogPost(self.env, 'about')
