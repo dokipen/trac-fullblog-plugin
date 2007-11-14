@@ -15,7 +15,7 @@
     <div id="ctxtnav" class="nav">
       <h2>Blog Navigation</h2>
         <ul>
-          <li py:if="'BLOG_CREATE' in perm">
+          <li py:if="'BLOG_CREATE' in perm('blog')" class="last">
             <a href="${href.blog('create')}">New Post</a></li>
         </ul>
       <hr />
@@ -32,14 +32,21 @@
         ${render_blog_post(blog_post)}
 
         <!-- Buttons for edit etc. -->
-        <py:if test="not list_mode and ('BLOG_MODIFY_ALL' in perm or (blog_post.author==perm.username and 'BLOG_MODIFY_OWN'))">
-          <form method="get" action="${href.blog('edit', blog_post.name)}">
-            <div>
-              <input type="submit" value="${_('Edit this post')}" accesskey="e" />
-            </div>
-          </form>
+        <py:if test="not list_mode and ('BLOG_MODIFY_ALL' in perm(blog_post.resource) or (
+                blog_post.author==perm.username and 'BLOG_MODIFY_OWN' in perm(blog_post.resource)))">
+          <div class="buttons">
+            <form method="get" action="${href.blog('edit', blog_post.name)}">
+              <div>
+                <input type="submit" value="${_('Edit this post')}" accesskey="e" />
+              </div>
+            </form>
+            ${attach_file_form(blog_attachments)}
+          </div>
         </py:if>
         
+        <!--! List attachments -->
+        ${list_of_attachments(blog_attachments, compact=True)}
+
         <!--! View comments -->
         
         <div id="comments" py:with="blog_comments = blog_post.get_comments()">
@@ -48,7 +55,7 @@
             <div py:for="index, comment in enumerate(blog_comments)"
                 class="blog-comment${index % 2 == 0 and ' odd' or ' even'}" id="comment-${comment.number}">
               <div class="comment-info">
-                  <a href="${req.href.blog('view', comment.post_name)}#comment-${to_unicode(comment.number)}">
+                  <a href="${req.href.blog(comment.post_name)}#comment-${to_unicode(comment.number)}">
                     ${comment.number}.</a>
                   ${comment.author} --
                   ${format_datetime(comment.time, '%Y-%m-%d %H:%M')}</div>
@@ -60,9 +67,9 @@
 
         <!--! Add new comment -->
 
-        <form py:if="'BLOG_COMMENT' in perm"
-              action="${req.href.blog('view', blog_post.name)}#preview" method="post">
-          <h2 id="newcomment">Add New Comment</h2>
+        <h3 id="newcomment">Add New Comment</h3>
+        <form py:if="'BLOG_COMMENT' in perm(blog_post.resource)"
+              action="${req.href.blog(blog_post.name)}#preview" method="post">
           <fieldset>
               <div py:if="defined('blog_comment')"
                       id="preview" class="blog-comment">
@@ -102,6 +109,9 @@
             <script type="text/javascript" src="${chrome.htdocs_location}js/wikitoolbar.js" />
           </fieldset>
         </form>
+        <p py:if="not 'BLOG_COMMENT' in perm(blog_post.resource)">
+          You do not have permission to add a comment.
+        </p>
 
       </py:if> <!--! Single blog post rendering end -->
 

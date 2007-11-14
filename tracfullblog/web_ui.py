@@ -15,7 +15,9 @@ from pkg_resources import resource_filename
 
 # Trac and Genshi imports
 from genshi.builder import tag
+from trac.attachment import AttachmentModule
 from trac.core import *
+from trac.mimeview.api import Context
 from trac.search.api import ISearchSource, shorten_result
 from trac.util.datefmt import to_datetime, to_unicode, localtz
 from trac.util.translation import _
@@ -59,7 +61,7 @@ class FullBlogModule(Component):
         """Should return an iterable object over the list of navigation items to
         add, each being a tuple in the form (category, name, text).
         """
-        if 'BLOG_VIEW' in req.perm:
+        if 'BLOG_VIEW' in req.perm('blog'):
             yield ('mainnav', 'blog',
                    tag.a(_('Blog'), href=req.href.blog()) )
 
@@ -68,7 +70,7 @@ class FullBlogModule(Component):
     def match_request(self, req):
         """Return whether the handler wants to process the given request."""
         match = re.match(r'^/blog(?:/(.*)|$)', req.path_info)
-        if 'BLOG_VIEW' in req.perm and match:
+        if 'BLOG_VIEW' in req.perm('blog') and match:
             req.args['blog_path'] = ''
             if match.group(1):
                 req.args['blog_path'] = match.group(1)
@@ -85,14 +87,23 @@ class FullBlogModule(Component):
         path_items = req.args.get('blog_path').split('/')
         path_items = [item for item in path_items if item] # clean out empties
         action = req.args.get('action', 'view').lower()
-        version = req.args.get('version', 0)
+        try:
+            version = int(req.args.get('version', 0))
+        except:
+            version = 0
         command = pagename = ''
         command = (len(path_items) and path_items[0].lower()) or ''
         if command in [u'view', u'edit'] and len(path_items) == 2:
             pagename = path_items[1]
         if command and command not in [
-                'view', 'edit', 'create', 'archive', 'about']:
-            command = 'listing'      # do further parsing later
+                'view', 'edit', 'create', 'archive']:
+            if len(path_items) == 1:
+                # Assume it is a request for a specific post
+                pagename = command
+                command = 'view'
+            else:
+                # Assume it is a listing, do further parsing later
+                command = 'listing'
 
         data = {}
 
@@ -124,14 +135,6 @@ class FullBlogModule(Component):
             template = 'fullblog_archive.html'
             data['blog_archive'] = group_posts_by_month(get_blog_posts(self.env))
 
-        elif command == 'about':
-            # The '/about' page - basically a post named 'about' so we redirect
-            if data['blog_about'].version:
-                # Exists, redirect to post read
-                req.redirect(req.href.blog('view', 'about'))
-            else:
-                req.redirect(req.href.blog('create', name='about'))
-
         elif command == 'view' and pagename:
             # Requesting a specific blog post
             the_post = BlogPost(self.env, pagename, version)
@@ -142,17 +145,21 @@ class FullBlogModule(Component):
                 req.perm.require('BLOG_COMMENT')
                 comment = BlogComment(self.env, pagename)
                 comment.comment = req.args.get('comment', '')
-                comment.author = (req.authname != 'anonymous' and req.authname) or req.args.get('author')
+                comment.author = (req.authname != 'anonymous' and req.authname) \
+                            or req.args.get('author')
                 comment.time = to_datetime(None)
                 if 'cancelcomment' in req.args:
-                    req.redirect(req.href.blog('view', pagename))                
+                    req.redirect(req.href.blog(pagename))                
                 elif 'previewcomment' in req.args:
                     data['blog_comment'] = comment
                 elif 'submitcomment' in req.args:
                     comment.create()
-                    req.redirect(req.href.blog('view', pagename
+                    req.redirect(req.href.blog(pagename
                                 )+'#comment-'+str(comment.number))
             data['blog_post'] = the_post
+            context = Context.from_request(req, the_post.resource)
+            data['context'] = context
+            data['blog_attachments'] = AttachmentModule(self.env).attachment_data(context)
 
         elif command in ['create', 'edit']:
             template = 'fullblog_edit.html'
@@ -161,7 +168,7 @@ class FullBlogModule(Component):
             if req.method == 'POST':   # Create or edit a blog post
                 if 'blog-cancel' in req.args:
                     if req.args.get('action','') == 'edit':
-                        req.redirect(req.href.blog('view', pagename))
+                        req.redirect(req.href.blog(pagename))
                     else:
                         req.redirect(req.href.blog())
                 # Assert permissions
@@ -190,10 +197,13 @@ class FullBlogModule(Component):
                     req.warning("Blog post body required.")
                 version_comment = req.args.get('new_version_comment', '')
                 if 'blog-preview' in req.args:
+                    context = Context.from_request(req, the_post.resource)
+                    data['context'] = context
+                    data['blog_attachments'] = AttachmentModule(self.env).attachment_data(context)
                     data['blog_action'] = 'preview'
                     data['blog_version_comment'] = version_comment
                     if (orig_author and orig_author != the_post.author) and (
-                            not 'BLOG_MODIFY_ALL' in req.perm):
+                            not 'BLOG_MODIFY_ALL' in req.perm(the_post.resource)):
                         req.warning("If you change the author you cannot " \
                             "edit the post again due to restricted permissions.")
                         data['blog_orig_author'] = orig_author
@@ -203,7 +213,7 @@ class FullBlogModule(Component):
                     if not req.warnings:
                         the_post.save(req.authname,
                                 version_comment)
-                        req.redirect(req.href.blog('view', the_post.name))
+                        req.redirect(req.href.blog(the_post.name))
             data['blog_edit'] = the_post
 
         elif command == 'listing':
@@ -270,7 +280,7 @@ class FullBlogModule(Component):
         if 'blog_posts' in filters:
             results = search_blog_posts(self.env, terms)
             for name, version, publish_time, author, title, body in results:
-                yield (req.href.blog('view', name), 'Blog: '+title,
+                yield (req.href.blog(name), 'Blog: '+title,
                     publish_time, author, shorten_result(
                             text=body, keywords=terms))
         if 'blog_comments' in filters:
@@ -279,7 +289,7 @@ class FullBlogModule(Component):
                     comment_time in results:
                 bp = BlogPost(self.env, post_name)
                 yield (req.href.blog(
-                        'view', post_name)+'#comment-'+str(comment_number),
+                        post_name)+'#comment-'+str(comment_number),
                     'Blog: '+bp.title+' (Comment '+str(comment_number)+')',
                     comment_time, comment_author,
                     shorten_result(text=comment, keywords=terms))

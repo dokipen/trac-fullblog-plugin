@@ -3,10 +3,10 @@
 
   <!--! Macro to render a post -->
   <div py:def="render_blog_post(post, list_mode=False)">
-    <h1 id="blog-title"><a href="${req.href.blog('view', post.name)}"
+    <h1 id="blog-title"><a href="${req.href.blog(post.name)}"
         py:strip="not list_mode">${post.title}</a></h1>
     <div id="blog-body">
-      ${wiki_to_html(context, post.body)}
+      ${wiki_to_html(context(post.resource), post.body)}
     </div>
     <p class="metainfo">Posted on: ${format_datetime(post.publish_time, '%Y-%m-%d %H:%M')}
       -- Last updated: ${format_datetime(post.version_time, '%Y-%m-%d %H:%M')}<br/>
@@ -17,7 +17,7 @@
             <span py:if="not post.category_list"> (none)</span>
       <py:if test="list_mode">
         <br />
-        <a href="${req.href.blog('view', post.name)}">
+        <a href="${req.href.blog(post.name)}">
             Comments</a> (${len(post.get_comments())})
       </py:if>
     </p>

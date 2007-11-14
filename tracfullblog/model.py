@@ -12,6 +12,8 @@ License: BSD
 import datetime
 from operator import itemgetter
 
+from trac.attachment import Attachment
+from trac.resource import Resource
 from trac.search import search_to_sql
 from trac.util.compat import sorted, set
 from trac.util.datefmt import to_datetime, to_timestamp, utc, localtz
@@ -337,13 +339,6 @@ class BlogComment(object):
         else:
             return 0
 
-class BlogAttachment(object):
-    """ Provides the methods needed to support attaching files to
-    blog posts, fething them, and deleting them. """
-    
-    # FIXME: Leave it util the Context dust settles...
-    pass
-
 class BlogPost(object):
     """ Model class representing a blog post with various methods
     to do CRUD and manipulation as needed by the plugin. """
@@ -426,9 +421,8 @@ class BlogPost(object):
     
     def delete(self, version=0):
         """ Deletes a specific version, or if none is provided
-        then all versions will be deleted. It will also delete any attachments
-        attached to the post. """
-        # FIXME: Add attachment delete when that gets up and running.
+        then all versions will be deleted. If all (or just one version exists) it
+        will also delete all comments and any attachments attached to the post. """
         cnx = self.env.get_db_cnx()
         cursor = cnx.cursor()
         if version:
@@ -439,6 +433,13 @@ class BlogPost(object):
             cursor.execute("DELETE FROM fullblog_posts "
                     "WHERE name=%s", (self.name,))
         cnx.commit()
+        if not len(self.get_versions()):
+            # Delete comments
+            for comment in self.get_comments():
+                comment.delete()
+            # Delete attachments
+            Attachment.delete_all(self.env, 'blog', self.name, cnx)
+            cnx.commit()
         return True
     
     def get_versions(self):
@@ -464,7 +465,9 @@ class BlogPost(object):
 
     def _load_post(self, version=0):
         """ Loads the record from the database into the object.
-        Will load the most recent if none is specified. """
+        Will load the most recent if none is specified.
+        Also creates a Resource instance for the object. """
+        self.resource = Resource('blog', self.name)
         self.versions = self.get_versions()
         if not self.versions or (version and not version in self.versions):
             # No blog post with the name exists

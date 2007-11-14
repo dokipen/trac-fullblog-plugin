@@ -14,8 +14,13 @@ from genshi.builder import tag
 
 from trac.core import *
 from trac.config import IntOption
-from trac.perm import IPermissionRequestor
+from trac.perm import IPermissionRequestor, IPermissionPolicy
+from trac.resource import IResourceManager
 from trac.wiki.api import IWikiSyntaxProvider
+
+# Relative imports (same package)
+from model import BlogPost, BlogComment
+
 
 class FullBlogCore(Component):
     
@@ -28,7 +33,8 @@ class FullBlogCore(Component):
     reserved_names = ['create', 'view', 'edit', 'delete',
                     'archive', 'category', 'author']
     
-    implements(IPermissionRequestor, IWikiSyntaxProvider)
+    implements(IPermissionRequestor, IWikiSyntaxProvider, IResourceManager,
+            IPermissionPolicy)
 
     # IPermissionRequestor method
     
@@ -45,6 +51,41 @@ class FullBlogCore(Component):
                 ('BLOG_MODIFY_ALL', ['BLOG_MODIFY_OWN']),
                 ('BLOG_ADMIN', ['BLOG_MODIFY_ALL', 'BLOG_COMMENT']),
                 ]
+
+    # IPermissionPolicy methods
+    
+    def check_permission(self, action, username, resource, perm):
+        """ Need to map the various actions into the legacy attachment permissions
+        used by the Attachment module. """
+        if resource and resource.realm == 'attachment' and resource.parent.realm == 'blog':
+            if action == 'ATTACHMENT_VIEW':
+                return 'BLOG_VIEW' in perm(resource.parent)
+            if action in ['ATTACHMENT_CREATE', 'ATTACHMENT_DELETE']:
+                if 'BLOG_MODIFY_ALL' in perm(resource.parent.realm):
+                    return True
+                elif 'BLOG_MODIFY_OWN' in perm(resource.parent.realm):
+                    bp = BlogPost(self.env, resource.parent.id)
+                    if bp.author == username:
+                        return True
+                    else:
+                        return False
+
+    # IResourceManager methods
+    
+    def get_resource_realms(self):
+        yield 'blog'
+
+    def get_resource_url(self, resource, href, **kwargs):
+        return href.blog(resource.id,
+                resource.version and 'version=%d' % (resource.version) or None)
+        
+    def get_resource_description(self, resource, format=None, context=None,
+                                 **kwargs):
+        bp = BlogPost(self.env, resource.id, resource.version)
+        if context:
+            return tag.a(bp.title, href=context.href.blog(resource.id))
+        else:
+            return bp.title
 
     # IWikiSyntaxProvider methods
 
@@ -67,8 +108,7 @@ class FullBlogCore(Component):
             return tag.a(label, href=formatter.href.blog(object))
         else:
             # Assume it is a regular post, and pass to 'view'
-            return tag.a(label, href=formatter.href.blog(
-                        'view/' + object))
+            return tag.a(label, href=formatter.href.blog(object))
 
     # Utility methods used by other modules
     

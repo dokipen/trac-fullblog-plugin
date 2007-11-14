@@ -23,7 +23,7 @@ class FullBlogAdminPanel(Component):
     # IAdminPageProvider
 
     def get_admin_panels(self, req):
-        if req.perm.has_permission('BLOG_ADMIN'):
+        if 'BLOG_ADMIN' in req.perm('blog'):
             yield ('blog', 'Blog', 'settings', 'Settings')
 
     def render_admin_panel(self, req, cat, page, path_info):     
