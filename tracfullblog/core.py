@@ -12,9 +12,10 @@ License: BSD
 
 from genshi.builder import tag
 
+from trac.attachment import ILegacyAttachmentPolicyDelegate
 from trac.core import *
 from trac.config import IntOption
-from trac.perm import IPermissionRequestor, IPermissionPolicy
+from trac.perm import IPermissionRequestor
 from trac.resource import IResourceManager
 from trac.wiki.api import IWikiSyntaxProvider
 
@@ -34,7 +35,7 @@ class FullBlogCore(Component):
                     'archive', 'category', 'author']
     
     implements(IPermissionRequestor, IWikiSyntaxProvider, IResourceManager,
-            IPermissionPolicy)
+            ILegacyAttachmentPolicyDelegate)
 
     # IPermissionRequestor method
     
@@ -52,23 +53,25 @@ class FullBlogCore(Component):
                 ('BLOG_ADMIN', ['BLOG_MODIFY_ALL', 'BLOG_COMMENT']),
                 ]
 
-    # IPermissionPolicy methods
+    # ILegacyAttachmentPolicyDelegate methods
     
-    def check_permission(self, action, username, resource, perm):
-        """ Need to map the various actions into the legacy attachment permissions
-        used by the Attachment module. """
-        if resource and resource.realm == 'attachment' and resource.parent.realm == 'blog':
+    def check_attachment_permission(self, action, username, resource, perm):
+        """ Respond to the various actions into the legacy attachment
+        permissions used by the Attachment module. """
+        if resource.parent.realm == 'blog':
             if action == 'ATTACHMENT_VIEW':
                 return 'BLOG_VIEW' in perm(resource.parent)
             if action in ['ATTACHMENT_CREATE', 'ATTACHMENT_DELETE']:
-                if 'BLOG_MODIFY_ALL' in perm(resource.parent.realm):
+                if 'BLOG_MODIFY_ALL' in perm(resource.parent):
                     return True
-                elif 'BLOG_MODIFY_OWN' in perm(resource.parent.realm):
+                elif 'BLOG_MODIFY_OWN' in perm(resource.parent):
                     bp = BlogPost(self.env, resource.parent.id)
                     if bp.author == username:
                         return True
                     else:
                         return False
+                else:
+                    return False
 
     # IResourceManager methods
     
