@@ -1,9 +1,9 @@
-#content {
+.blog #main {
     width: 75%;
     margin: 1em 0em;
     padding-right: 1em;
 }
-#sidebar {
+.blog #sidebar {
     width: 20%;
     float: right;
     padding: 1em;
@@ -52,3 +52,10 @@
     padding-bottom: 1em;
 }
 
+div.sidebar-section {
+    border-bottom: 1px solid #CCC;
+}
+
+div.sidebar-section.last {
+    border-bottom: none;
+}
