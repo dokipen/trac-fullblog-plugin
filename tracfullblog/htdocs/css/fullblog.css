@@ -1,3 +1,7 @@
+/*
+** Styles for the /blog pages
+*/ 
+
 .blog #main {
     width: 75%;
     margin: 1em 0em;
@@ -58,4 +62,12 @@ div.sidebar-section {
 
 div.sidebar-section.last {
     border-bottom: none;
+}
+
+/*
+** Style used for displaying Blog icon in Timeline
+*/ 
+
+.timeline dt.blog {
+    background-image: url(../blog.png);
 }

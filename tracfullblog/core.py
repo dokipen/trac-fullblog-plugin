@@ -86,9 +86,9 @@ class FullBlogCore(Component):
                                  **kwargs):
         bp = BlogPost(self.env, resource.id, resource.version)
         if context:
-            return tag.a(bp.title, href=context.href.blog(resource.id))
+            return tag.a('Blog: '+bp.title, href=context.href.blog(resource.id))
         else:
-            return bp.title
+            return 'Blog: '+bp.title
 
     # IWikiSyntaxProvider methods
 

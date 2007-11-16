@@ -12,18 +12,23 @@ License: BSD
 import datetime
 import re
 from pkg_resources import resource_filename
+from operator import itemgetter
 
 # Trac and Genshi imports
 from genshi.builder import tag
 from trac.attachment import AttachmentModule
 from trac.core import *
 from trac.mimeview.api import Context
+from trac.resource import Resource
 from trac.search.api import ISearchSource, shorten_result
+from trac.timeline.api import ITimelineEventProvider
+from trac.util.compat import sorted
 from trac.util.datefmt import to_datetime, to_unicode, localtz
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
                             add_stylesheet
+from trac.wiki.formatter import format_to_oneliner, format_to_html
 
 # Imports from same package
 from model import *
@@ -44,7 +49,8 @@ def add_months(thedate, months):
 class FullBlogModule(Component):
     
     implements(IRequestHandler, INavigationContributor,
-               ISearchSource, ITemplateProvider)
+               ISearchSource, ITimelineEventProvider,
+               ITemplateProvider)
 
     # INavigationContributor methods
     
@@ -294,6 +300,98 @@ class FullBlogModule(Component):
                     comment_time, comment_author,
                     shorten_result(text=comment, keywords=terms))
     
+    # ITimelineEventProvider methods
+
+    def get_timeline_filters(self, req):
+        if 'BLOG_VIEW' in req.perm:
+            yield ('blog', _('Blog posts'))
+            yield ('blog-details', _('Blog details'))
+
+    def get_timeline_events(self, req, start, stop, filters):
+        if 'blog' in filters or 'blog-details' in filters:
+            add_stylesheet(req, 'tracfullblog/css/fullblog.css')
+            blog_realm = Resource('blog')
+            blog_posts = get_blog_posts(self.env, from_dt=start, to_dt=stop,
+                                        all_versions=True)
+        if 'blog' in filters:
+            # Blog posts
+            for name, version, time, author, title, body, category_list \
+                    in blog_posts:
+                bp_resource = blog_realm(id=name, version=version)
+                if 'BLOG_VIEW' not in req.perm(bp_resource):
+                    continue
+                if version != 1:
+                    continue # Only interested in first version here
+                bp = BlogPost(self.env, name, version=version)
+                yield ('blog', bp.version_time, bp.version_author,
+                            (bp_resource, bp, None))
+        if 'blog-details' in filters:
+            # Blog posts
+            for name, version, time, author, title, body, category_list \
+                    in blog_posts:
+                bp_resource = blog_realm(id=name, version=version)
+                if 'BLOG_VIEW' not in req.perm(bp_resource):
+                    continue
+                if version == 1 and 'blog' in filters:
+                    continue # First version handled above
+                bp = BlogPost(self.env, name, version=version)
+                yield ('blog', bp.version_time, bp.version_author,
+                            (bp_resource, bp, None))
+            # Attachments (will be rendered by attachment module)
+            for event in AttachmentModule(self.env).get_timeline_events(
+                req, blog_realm, start, stop):
+                yield event
+            # Blog comments
+            blog_comments = get_blog_comments(self.env, from_dt=start, to_dt=stop)
+            blog_comments = sorted(blog_comments, key=itemgetter(4), reverse=True)
+            for post_name, number, comment, author, time in blog_comments:
+                bp_resource = blog_realm(id=post_name)
+                if 'BLOG_VIEW' not in req.perm(bp):
+                    continue
+                bp = BlogPost(self.env, post_name)
+                bc = BlogComment(self.env, post_name, number=number)
+                yield ('blog', time, author, (bp_resource, bp, bc))
+
+
+    def render_timeline_event(self, context, field, event):
+        bp_resource, bp, bc = event[3]
+        format = context.req.args.get('format', '').lower()
+        if bc: # A blog comment
+            if field == 'url':
+                return context.href.blog(bp.name) + '#comment-%d' % bc.number
+            elif field == 'title':
+                return tag(tag.em('Blog: '+bp.title), ' comment added')
+            elif field == 'description':
+                return format_to_oneliner(self.env,
+                            context(resource=bp_resource), bc.comment)
+        else: # A blog post
+            if field == 'url':
+                return context.href.blog(bp.name)
+            elif field == 'title':
+                if format == 'rss' and bp.version == 1:
+                    return tag(tag.em(bp.title))
+                else:
+                    return tag(tag.em('Blog: '+bp.title),
+                            bp.version > 1 and ' edited' or ' created')
+            elif field == 'description':
+                if format.lower() == 'rss':
+                    if bp.version == 1:
+                        # In RSS, render first version in full view
+                        return format_to_html(self.env,
+                            context.from_request(context.req,
+                                    resource=bp_resource, absurls=True),
+                            bp.body)
+                    else:
+                        return format_to_html(self.env,
+                            context.from_request(context.req,
+                                    resource=bp_resource, absurls=True),
+                            bp.version_comment)
+                else:
+                    # Any other regular display format
+                    return format_to_oneliner(self.env,
+                            context(resource=bp_resource),
+                            bp.version==1 and bp.body or bp.version_comment)
+
     # ITemplateProvider methods
 
     def get_htdocs_dirs(self):
