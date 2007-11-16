@@ -30,7 +30,7 @@
         <p py:if="not blog_archive[0]">No posts.</p>
         <py:if test="blog_archive[0]">
           <div class="monthlist" py:for="period, posts in blog_archive">
-              <h3>${to_unicode(period.strftime('%B %Y'))}</h3>
+              <h3>${to_unicode("%s %d" % (blog_month_names[period.month-1], period.year))}</h3>
               <ul>
                 <li py:for="name, version, time, author, title, body, categories in posts">
                   <a href="${req.href.blog(name)}">${title}</a>

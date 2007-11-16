@@ -9,6 +9,7 @@ License: BSD
 
 from trac.core import *
 from trac.admin import IAdminPanelProvider
+from trac.resource import Resource
 
 # Relative imports
 from core import FullBlogCore
@@ -27,7 +28,7 @@ class FullBlogAdminPanel(Component):
             yield ('blog', 'Blog', 'settings', 'Settings')
 
     def render_admin_panel(self, req, cat, page, path_info):     
-        req.perm.require('BLOG_ADMIN')
+        req.perm(Resource('blog', None)).require('BLOG_ADMIN')
 
         blog_admin = {}
         blog_core = FullBlogCore(self.env)

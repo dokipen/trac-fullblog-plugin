@@ -140,4 +140,4 @@ class FullBlogCore(Component):
             cnx.commit()
             return True
         except:
-            return False    
+            return False

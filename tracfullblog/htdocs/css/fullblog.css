@@ -64,6 +64,15 @@ div.sidebar-section.last {
     border-bottom: none;
 }
 
+div.sidebar-section ul {
+    padding-left: 0.5em;
+    list-style:none;
+}
+
+#sidebar *:link, #sidebar *:visited {
+    border-bottom: none;
+}
+
 /*
 ** Style used for displaying Blog icon in Timeline
 */ 

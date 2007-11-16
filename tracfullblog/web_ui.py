@@ -10,6 +10,7 @@ License: BSD
 
 # Imports from standard lib
 import datetime
+import calendar
 import re
 from pkg_resources import resource_filename
 from operator import itemgetter
@@ -17,13 +18,14 @@ from operator import itemgetter
 # Trac and Genshi imports
 from genshi.builder import tag
 from trac.attachment import AttachmentModule
+from trac.config import ListOption
 from trac.core import *
 from trac.mimeview.api import Context
 from trac.resource import Resource
 from trac.search.api import ISearchSource, shorten_result
 from trac.timeline.api import ITimelineEventProvider
 from trac.util.compat import sorted
-from trac.util.datefmt import to_datetime, to_unicode, localtz
+from trac.util.datefmt import to_datetime, to_unicode, utc, localtz
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
@@ -39,10 +41,19 @@ __all__ = ['FullBlogModule']
 # Utility functions
 
 def add_months(thedate, months):
-    "Add <months> months to <thedate>."
+    """ Add <months> months to <thedate>. """
     y, m, d = thedate.timetuple()[:3]
     y2, m2 = divmod(m + months - 1, 12)
     return datetime.datetime(y + y2, m2 + 1, d, tzinfo=thedate.tzinfo)
+
+def map_month_names(month_list):
+    """ Returns a list containing the 12 month names. """
+    if len(month_list) == 12:
+        # A list of 12 names is passed in, use that
+        return month_list
+    else:
+        # Use list from default locale setting
+        return [calendar.month_name[i+1] for i in range(12)]
 
 # UI class
 
@@ -51,6 +62,12 @@ class FullBlogModule(Component):
     implements(IRequestHandler, INavigationContributor,
                ISearchSource, ITimelineEventProvider,
                ITemplateProvider)
+
+    ListOption('fullblog', 'month_names',
+        doc = """Ability to specify a list of month names for display in groupings.
+        If empty it will make a list from default locale setting.
+        Enter list of 12 months like:
+        `month_names = January, February, ..., December` """)
 
     # INavigationContributor methods
     
@@ -116,7 +133,9 @@ class FullBlogModule(Component):
         template = 'fullblog_view.html'
         data['blog_about'] = BlogPost(self.env, 'about')
         data['blog_infotext'] = blog_core.get_bloginfotext()
-
+        blog_month_names = map_month_names(
+                    self.env.config.getlist('fullblog', 'month_names'))
+        data['blog_month_names'] = blog_month_names
         self.env.log.debug(
             "Blog debug: command=%r, pagename=%r, path_items=%r" % (
                 command, pagename, path_items))
@@ -148,12 +167,12 @@ class FullBlogModule(Component):
                 raise HTTPNotFound("No blog post named '%s'." % pagename)
             if req.method == 'POST':   # Adding/Previewing a comment
                 # Permission?
-                req.perm.require('BLOG_COMMENT')
+                req.perm(the_post.resource).require('BLOG_COMMENT')
                 comment = BlogComment(self.env, pagename)
                 comment.comment = req.args.get('comment', '')
                 comment.author = (req.authname != 'anonymous' and req.authname) \
                             or req.args.get('author')
-                comment.time = to_datetime(None)
+                comment.time = datetime.datetime.now(utc)
                 if 'cancelcomment' in req.args:
                     req.redirect(req.href.blog(pagename))                
                 elif 'previewcomment' in req.args:
@@ -179,12 +198,12 @@ class FullBlogModule(Component):
                         req.redirect(req.href.blog())
                 # Assert permissions
                 if command == 'create':
-                    req.perm.require('BLOG_CREATE')
+                    req.perm(Resource('blog', None)).require('BLOG_CREATE')
                 elif command == 'edit':
                     if the_post.author == req.authname:
-                        req.perm.require('BLOG_MODIFY_OWN')
+                        req.perm(the_post.resource).require('BLOG_MODIFY_OWN')
                     else:
-                        req.perm.require('BLOG_MODIFY_ALL')
+                        req.perm(the_post.resource).require('BLOG_MODIFY_ALL')
                 # Input verifications and warnings
                 if command == 'create' and the_post.version:
                     req.warning("A post named '%s' already exists. " % (
@@ -229,10 +248,10 @@ class FullBlogModule(Component):
                 # Test for year and month values
                 year = int(path_items[0])
                 month = int(path_items[1])
-                from_dt = datetime.datetime(year, month, 1, tzinfo=localtz)
+                from_dt = datetime.datetime(year, month, 1, tzinfo=utc)
                 to_dt = add_months(from_dt, months=1)
-                title = "Posts for the month of %s" % (
-                        to_unicode(from_dt.strftime('%B %Y')),)
+                title = "Posts for the month of %s %d" % (
+                        blog_month_names[from_dt.month -1], from_dt.year)
             except ValueError:
                 # Not integers, ignore
                 to_dt = from_dt = None

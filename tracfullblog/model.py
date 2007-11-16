@@ -48,7 +48,7 @@ def search_blog_posts(env, terms):
     env.log.debug("search_blog_posts() SQL: %r" % sql)
     cursor.execute(sql, args)
     # Return the items we have found
-    return [(row[0], row[1], to_datetime(row[2]), row[3],
+    return [(row[0], row[1], to_datetime(row[2], utc), row[3],
             row[4], row[5]) for row in cursor]
 
 def search_blog_comments(env, terms):
@@ -67,7 +67,7 @@ def search_blog_comments(env, terms):
     env.log.debug("search_blog_comments() SQL: %r" % sql)
     cursor.execute(sql, args)
     # Return the items we have found
-    return [(row[0], row[1], row[2], row[3], to_datetime(row[4]))
+    return [(row[0], row[1], row[2], row[3], to_datetime(row[4], utc))
             for row in cursor]
 
 def get_blog_posts(env, category='', author='', from_dt=None, to_dt=None,
@@ -131,7 +131,7 @@ def get_blog_posts(env, category='', author='', from_dt=None, to_dt=None,
     cursor.execute(sql, where_values)
 
     # Return the rows
-    return [(row[0], row[1], to_datetime(row[2]), row[3], row[4],
+    return [(row[0], row[1], to_datetime(row[2], utc), row[3], row[4],
                 row[5], _parse_categories(row[6])) for row in cursor]
 
 def get_blog_comments(env, post_name='', from_dt=None, to_dt=None):
@@ -165,7 +165,7 @@ def get_blog_comments(env, post_name='', from_dt=None, to_dt=None):
     cursor.execute(sql, where_values or None)
 
     # Return the items we have found
-    return [(row[0], row[1], row[2], row[3], to_datetime(row[4]))
+    return [(row[0], row[1], row[2], row[3], to_datetime(row[4], utc))
             for row in cursor]
 
 def get_months_authors_categories(env, from_dt=None, to_dt=None):
@@ -250,7 +250,7 @@ class BlogComment(object):
     number = 0     # auto
     comment = ''   # required
     author = ''    # required
-    time = to_datetime(None) # Now
+    time = datetime.datetime.now(utc) # Now
     
     def __init__(self, env, post_name, number=0):
         """ Requires a name for the blog post that the comment belongs to.
@@ -318,7 +318,7 @@ class BlogComment(object):
             self.number = number
             self.comment = row[0]
             self.author = row[1]
-            self.time = to_datetime(row[2])
+            self.time = to_datetime(row[2], utc)
             return True
         return False
     
@@ -348,8 +348,8 @@ class BlogPost(object):
                     'version': 0, # auto
                     'title': u'', # required
                     'body': u'',  # required
-                    'publish_time': to_datetime(None),  # now
-                    'version_time': to_datetime(None),  # now
+                    'publish_time': datetime.datetime.now(utc),  # now
+                    'version_time': datetime.datetime.now(utc),  # now
                     'version_comment': u'',
                     'version_author': u'',  # required
                     'author': u'',          # required
@@ -380,7 +380,7 @@ class BlogPost(object):
                 "as name, title, body, author or version_author is missing" % (
                         self.name,) )
             return False
-        version_time = to_timestamp(to_datetime(None))
+        version_time = to_timestamp(datetime.datetime.now(utc))
         self.versions = sorted(self.get_versions())
         version = 1
         if self.versions:
@@ -484,8 +484,8 @@ class BlogPost(object):
             self.version = version
             self.title = row[0]
             self.body = row[1]
-            self.publish_time = to_datetime(row[2])
-            self.version_time = to_datetime(row[3])
+            self.publish_time = to_datetime(row[2], utc)
+            self.version_time = to_datetime(row[3], utc)
             self.version_comment = row[4]
             self.version_author = row[5]
             self.author = row[6]
