@@ -115,8 +115,8 @@ class FullBlogModule(Component):
         except:
             version = 0
         command = pagename = ''
-        command = (len(path_items) and path_items[0].lower()) or ''
-        if command in [u'view', u'edit'] and len(path_items) == 2:
+        command = (len(path_items) and path_items[0]) or ''
+        if command.lower() in [u'view', u'edit'] and len(path_items) == 2:
             pagename = path_items[1]
         if command and command not in [
                 'view', 'edit', 'create', 'archive']:
