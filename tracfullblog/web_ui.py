@@ -290,8 +290,9 @@ class FullBlogModule(Component):
         `default` is an optional boolean for determining whether this filter
         is searchable by default.
         """
-        yield ('blog_posts', 'Blog Posts')
-        yield ('blog_comments', 'Blog Comments')
+        if 'BLOG_VIEW' in req.perm('blog', id=None):
+            yield ('blog_posts', 'Blog Posts')
+            yield ('blog_comments', 'Blog Comments')
 
     def get_search_results(self, req, terms, filters):
         """Return a list of search results matching each search term in `terms`.
@@ -302,34 +303,43 @@ class FullBlogModule(Component):
         The events returned by this function must be tuples of the form
         `(href, title, date, author, excerpt).`
         """
+        blog_realm = Resource('blog')
+        if not 'BLOG_VIEW' in req.perm(blog_realm):
+            return
         if 'blog_posts' in filters:
             results = search_blog_posts(self.env, terms)
             for name, version, publish_time, author, title, body in results:
-                yield (req.href.blog(name), 'Blog: '+title,
-                    publish_time, author, shorten_result(
-                            text=body, keywords=terms))
+                bp_resource = blog_realm(id=name, version=version)
+                if 'BLOG_VIEW' in req.perm(bp_resource):
+                    yield (req.href.blog(name), 'Blog: '+title,
+                        publish_time, author, shorten_result(
+                                text=body, keywords=terms))
         if 'blog_comments' in filters:
             results = search_blog_comments(self.env, terms)
             for post_name, comment_number, comment, comment_author, \
                     comment_time in results:
-                bp = BlogPost(self.env, post_name)
-                yield (req.href.blog(
-                        post_name)+'#comment-'+str(comment_number),
-                    'Blog: '+bp.title+' (Comment '+str(comment_number)+')',
-                    comment_time, comment_author,
-                    shorten_result(text=comment, keywords=terms))
+                bp_resource = blog_realm(id=post_name, version=None)
+                if 'BLOG_VIEW' in req.perm(bp_resource):
+                    bp = BlogPost(self.env, post_name)
+                    yield (req.href.blog(
+                            post_name)+'#comment-'+str(comment_number),
+                        'Blog: '+bp.title+' (Comment '+str(comment_number)+')',
+                        comment_time, comment_author,
+                        shorten_result(text=comment, keywords=terms))
     
     # ITimelineEventProvider methods
 
     def get_timeline_filters(self, req):
-        if 'BLOG_VIEW' in req.perm:
+        if 'BLOG_VIEW' in req.perm('blog', id=None):
             yield ('blog', _('Blog posts'))
             yield ('blog-details', _('Blog details'))
 
     def get_timeline_events(self, req, start, stop, filters):
         if 'blog' in filters or 'blog-details' in filters:
-            add_stylesheet(req, 'tracfullblog/css/fullblog.css')
             blog_realm = Resource('blog')
+            if not 'BLOG_VIEW' in req.perm(blog_realm):
+                return
+            add_stylesheet(req, 'tracfullblog/css/fullblog.css')
             blog_posts = get_blog_posts(self.env, from_dt=start, to_dt=stop,
                                         all_versions=True)
         if 'blog' in filters:
