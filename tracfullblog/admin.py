@@ -10,6 +10,7 @@ License: BSD
 from trac.core import *
 from trac.admin import IAdminPanelProvider
 from trac.resource import Resource
+from trac.web.chrome import add_warning
 
 # Relative imports
 from core import FullBlogCore
@@ -46,7 +47,7 @@ class FullBlogAdminPanel(Component):
                     req.redirect(req.href.admin(req.args['cat_id'],
                             req.args['panel_id']))
                 else:
-                    req.warning("Error storing text in database. Not saved.")
+                    add_warning(req, "Error storing text in database. Not saved.")
             else:
                 self.log.warning('Unknown POST request: %s', req.args)
         

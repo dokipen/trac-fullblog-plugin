@@ -12,15 +12,6 @@
 
   <body>
 
-    <div id="ctxtnav" class="nav">
-      <h2>Blog Navigation</h2>
-        <ul>
-          <li py:if="'BLOG_CREATE' in perm('blog')" class="last">
-            <a href="${href.blog('create')}">New Post</a></li>
-        </ul>
-      <hr />
-    </div>
-
     <div id="content" class="blog wiki">
 
       <xi:include href="fullblog_sidebar.html" />

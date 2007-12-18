@@ -29,7 +29,7 @@ from trac.util.datefmt import to_datetime, to_unicode, utc, localtz
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
-                            add_stylesheet
+                            add_stylesheet, add_warning, add_ctxtnav
 from trac.wiki.formatter import format_to_oneliner, format_to_html
 
 # Imports from same package
@@ -206,20 +206,20 @@ class FullBlogModule(Component):
                         req.perm(the_post.resource).require('BLOG_MODIFY_ALL')
                 # Input verifications and warnings
                 if command == 'create' and the_post.version:
-                    req.warning("A post named '%s' already exists. " % (
+                    add_warning(req, "A post named '%s' already exists. " % (
                             the_post.name,))
                     the_post = BlogPost(self.env, default_pagename)
                 elif the_post.name == default_pagename:
-                    req.warning("The default page shortname must be changed.")
+                    add_warning(req, "The default page shortname must be changed.")
                 elif the_post.name in reserved_names:
-                    req.warning("'%s' is a reserved name. Please change." % (
+                    add_warning(req, "'%s' is a reserved name. Please change." % (
                                     the_post.name,))
                 orig_author = the_post.author
                 is_updated = the_post.update_fields(req.args)
                 if not the_post.title:
-                    req.warning("Title required.")
+                    add_warning(req, "Title required.")
                 if not the_post.body:
-                    req.warning("Blog post body required.")
+                    add_warning(req, "Blog post body required.")
                 version_comment = req.args.get('new_version_comment', '')
                 if 'blog-preview' in req.args:
                     context = Context.from_request(req, the_post.resource)
@@ -229,13 +229,13 @@ class FullBlogModule(Component):
                     data['blog_version_comment'] = version_comment
                     if (orig_author and orig_author != the_post.author) and (
                             not 'BLOG_MODIFY_ALL' in req.perm(the_post.resource)):
-                        req.warning("If you change the author you cannot " \
+                        add_warning(req, "If you change the author you cannot " \
                             "edit the post again due to restricted permissions.")
                         data['blog_orig_author'] = orig_author
                 elif 'blog-save' in req.args:
                     if not is_updated:
-                        req.warning("No changes made. New version not created.")
-                    if not req.warnings:
+                        add_warning("No changes made. New version not created.")
+                    if not req.chrome['warnings']:
                         the_post.save(req.authname,
                                 version_comment)
                         req.redirect(req.href.blog(the_post.name))
@@ -276,7 +276,9 @@ class FullBlogModule(Component):
 
         data['blog_months'], data['blog_authors'], data['blog_categories'], \
                 data['blog_total'] = get_months_authors_categories(self.env)
-        
+        if 'BLOG_CREATE' in req.perm('blog'):
+            add_ctxtnav(req, 'New Post', href=req.href.blog('create'),
+                    title="Create new Blog Post")
         add_stylesheet(req, 'tracfullblog/css/fullblog.css')
         return (template, data, None)
     
