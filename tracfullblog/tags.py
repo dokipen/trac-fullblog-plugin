@@ -25,9 +25,8 @@ class FullBlogTaggingSystem(TaggingSystem):
     def walk_tagged_names(self, names, tags, predicate):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        tags = set(tags)
-        names = set(names)
-        self.env.log.debug(repr(names)+repr(tags))
+        tags = set([to_unicode(tag) for tag in tags])
+        names = set([to_unicode(name) for name in names])
         args = []
         sql = "SELECT name, categories FROM fullblog_posts "
         constraints = []
