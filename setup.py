@@ -19,10 +19,13 @@ setup(name='TracFullBlogPlugin',
       url='http://trac-hacks.org/wiki/FullBlogPlugin',
       license='BSD',
       zip_safe = False,
+      extras_require={
+            'tags': 'TracTags>=0.5'},
       entry_points={'trac.plugins': [
             'tracfullblog.admin = tracfullblog.admin',
             'tracfullblog.core = tracfullblog.core',
             'tracfullblog.db = tracfullblog.db',
+            'tracfullblog.tags = tracfullblog.tags[tags]',
             'tracfullblog.web_ui = tracfullblog.web_ui']},
       package_data={'tracfullblog' : ['htdocs/*.png',
                                       'htdocs/css/*.css',
