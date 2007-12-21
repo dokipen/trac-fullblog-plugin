@@ -1,0 +1,32 @@
+<div xmlns:py="http://genshi.edgewall.org/" py:strip="True">
+
+  <!--! Macro to render a post -->
+  <div py:def="render_blog_post(post, list_mode=False)">
+    <h1 class="blog-title"><a href="${req.href.blog(post.name)}"
+        py:strip="not list_mode">${post.title}</a></h1>
+    <div id="blog-body">
+      ${wiki_to_html(context(post.resource), post.body)}
+    </div>
+    <p class="metainfo">Posted on: ${format_datetime(post.publish_time, '%Y-%m-%d %H:%M')}
+      -- Last updated: ${format_datetime(post.version_time, '%Y-%m-%d %H:%M')} <br/>
+      Author: <a href="${req.href.blog('author', post.author)}">${post.author}</a> <br />
+      Categories: <py:for each="cat in post.category_list">
+                    <a href="${req.href.blog('category', cat)}">${cat}</a>
+                  </py:for>
+            <py:if test="not post.category_list"> (none)</py:if>
+      <py:if test="list_mode">
+        <br />
+        <a href="${req.href.blog(post.name)}">
+            Comments</a> (${len(post.get_comments())})
+      </py:if>
+    </p>
+  </div>
+
+  <!--! Directly execute the macro on import if 'execute_blog_macro' is set.
+        For this not to throw errors it presumes variables to be called
+        already exists in the data dictionary. -->
+  <py:if test="defined('execute_blog_macro') and execute_blog_macro">
+    ${render_blog_post(post, list_mode)}
+  </py:if>
+
+</div>

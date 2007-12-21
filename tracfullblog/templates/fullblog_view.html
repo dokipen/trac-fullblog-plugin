@@ -12,7 +12,7 @@
 
   <body>
 
-    <xi:include href="fullblog_macros.html" />
+    <xi:include href="fullblog_macro_post.html" />
 
     <div id="content" class="blog wiki">
 
@@ -121,7 +121,7 @@
         <!--! View list of posts -->
 
         <py:if test="defined('blog_post_list')">
-          <div id="blog-list-title">${blog_list_title}</div>
+          <div class="blog-list-title">${blog_list_title}</div>
           <p py:if="not len(blog_post_list)">
             No blog posts available.
           </p>

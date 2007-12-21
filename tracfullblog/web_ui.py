@@ -10,7 +10,6 @@ License: BSD
 
 # Imports from standard lib
 import datetime
-import calendar
 import re
 from pkg_resources import resource_filename
 from operator import itemgetter
@@ -35,27 +34,10 @@ from trac.wiki.formatter import format_to_oneliner, format_to_html
 # Imports from same package
 from model import *
 from core import FullBlogCore
+from util import map_month_names, parse_period
 
 __all__ = ['FullBlogModule']
 
-# Utility functions
-
-def add_months(thedate, months):
-    """ Add <months> months to <thedate>. """
-    y, m, d = thedate.timetuple()[:3]
-    y2, m2 = divmod(m + months - 1, 12)
-    return datetime.datetime(y + y2, m2 + 1, d, tzinfo=thedate.tzinfo)
-
-def map_month_names(month_list):
-    """ Returns a list containing the 12 month names. """
-    if len(month_list) == 12:
-        # A list of 12 names is passed in, use that
-        return month_list
-    else:
-        # Use list from default locale setting
-        return [calendar.month_name[i+1] for i in range(12)]
-
-# UI class
 
 class FullBlogModule(Component):
     
@@ -107,7 +89,7 @@ class FullBlogModule(Component):
         reserved_names = blog_core.reserved_names
         
         # Parse out the path and actions from args
-        path_items = req.args.get('blog_path').split('/')
+        path_items = req.args.get('blog_path', '').split('/')
         path_items = [item for item in path_items if item] # clean out empties
         action = req.args.get('action', 'view').lower()
         try:
@@ -244,17 +226,11 @@ class FullBlogModule(Component):
         elif command == 'listing':
             # 2007/10 or category/something or author/theuser
             title = category = author = ''
-            try:
-                # Test for year and month values
-                year = int(path_items[0])
-                month = int(path_items[1])
-                from_dt = datetime.datetime(year, month, 1, tzinfo=utc)
-                to_dt = add_months(from_dt, months=1)
+            from_dt, to_dt = parse_period(path_items)
+            if from_dt:
                 title = "Posts for the month of %s %d" % (
                         blog_month_names[from_dt.month -1], from_dt.year)
-            except ValueError:
-                # Not integers, ignore
-                to_dt = from_dt = None
+
             category = (path_items[0].lower() == 'category'
                         and path_items[1]) or ''
             if category:

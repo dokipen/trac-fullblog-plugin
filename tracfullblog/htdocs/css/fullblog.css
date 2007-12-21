@@ -21,6 +21,11 @@
     text-align: right;
 }
 
+.metainfo span {
+    padding: 0;
+    margin: 0;
+}
+
 .blog-comment {
     padding: 0.25em 0.25em;
 }
@@ -47,9 +52,10 @@
     color: black;
 }
 
-#blog-list-title {
+.blog-list-title {
     text-align: center;
     color: gray;
+    padding-bottom: 0.5em;
 }
     
 #content div.field {
@@ -79,4 +85,23 @@ div.sidebar-section ul {
 
 .timeline dt.blog {
     background-image: url(../blog.png);
+}
+
+/*
+** Style used for a blog macros
+*/ 
+
+div.blogflash {
+    background: #F3F3F3 none repeat scroll 0%;
+    border: 2px solid gray;
+    float: right;
+    font-size: 0.8em;
+    margin: 0em;
+    padding: 0.5em 1em;
+    width: 400px;
+}
+
+div.blogflash .blog-title {
+    font-size: 1.35em;
+    margin-left: inherit;
 }

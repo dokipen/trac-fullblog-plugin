@@ -52,8 +52,8 @@ class FullBlogAdminPanel(Component):
                 self.log.warning('Unknown POST request: %s', req.args)
         
         blog_admin['bloginfotext'] = blog_core.get_bloginfotext()
-        blog_admin['numpostsfront'] = self.env.config.get(
-                        'fullblog', 'num_items_front')
+        blog_admin['numpostsfront'] = self.env.config.getint(
+                                            'fullblog', 'num_items_front')
         
         return ('fullblog_admin.html', {'blog_admin': blog_admin})
         
