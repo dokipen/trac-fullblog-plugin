@@ -1,5 +1,5 @@
 /*
-** Styles for the /blog pages
+** Styles for the /blog pages and blog items in macros
 */ 
 
 .blog #main {
@@ -15,15 +15,20 @@
     background-color: #F3F3F3;
 }
 
-#content .metainfo {
+.blog-title *:link {
+    color: black;
+}
+
+.blog .metainfo {
     color: gray;
     font-size: smaller;
     text-align: right;
 }
 
-.metainfo span {
+.blog ul.metainfo {
     padding: 0;
     margin: 0;
+    list-style: none;
 }
 
 .blog-comment {
@@ -71,22 +76,32 @@ div.sidebar-section.last {
 }
 
 div.sidebar-section ul {
+    margin-left: 0;
     padding-left: 0.5em;
-    list-style:none;
+    list-style: none;
+}
+
+div.sidebar-section .metainfo {
+    float: right;
 }
 
 #sidebar *:link, #sidebar *:visited {
     border-bottom: none;
 }
 
+div.monthlist li {
+    padding-top: 0.3em;
+}
+
 /*
 ** Style used for displaying Blog icon in Timeline
 */ 
 
-.timeline dt.blog {
+.timeline dt.blog a {
     background-image: url(../blog.png);
 }
 
+*/
 /*
 ** Style used for a blog macros
 */ 
@@ -103,5 +118,14 @@ div.blogflash {
 
 div.blogflash .blog-title {
     font-size: 1.35em;
-    margin-left: inherit;
+    margin-left: 0;
 }
+
+div.blogflash span.metaupdated {
+    display: none;
+}
+
+div.blogflash li.metadates {
+    float: left;
+}
+
