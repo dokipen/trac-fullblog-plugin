@@ -131,8 +131,16 @@ def get_blog_posts(env, category='', author='', from_dt=None, to_dt=None,
     cursor.execute(sql, where_values)
 
     # Return the rows
-    return [(row[0], row[1], to_datetime(row[2], utc), row[3], row[4],
-                row[5], _parse_categories(row[6])) for row in cursor]
+    blog_posts = []
+    for row in cursor:
+        # Extra check needed to weed out almost-matches where requested
+        # category is a substring of another (searched using LIKE)
+        categories = _parse_categories(row[6])
+        if category and category not in categories:
+            continue
+        blog_posts.append((row[0], row[1], to_datetime(row[2], utc), row[3],
+                row[4], row[5], categories))
+    return blog_posts
 
 def get_blog_comments(env, post_name='', from_dt=None, to_dt=None):
     """ Returns comments as a list of tuples from search based on

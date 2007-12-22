@@ -87,6 +87,8 @@ class FullBlogModule(Component):
         blog_core = FullBlogCore(self.env)
         default_pagename = 'change_this_post_shortname'
         reserved_names = blog_core.reserved_names
+
+        format = req.args.get('format', '').lower()
         
         # Parse out the path and actions from args
         path_items = req.args.get('blog_path', '').split('/')
@@ -127,15 +129,19 @@ class FullBlogModule(Component):
             data['blog_post_list'] = []
             count = 0
             maxcount = self.env.config.getint('fullblog', 'num_items_front')
-            data['blog_list_title'] = "Recent posts (max %d) " \
-                        "- Browse or Archive for more" % maxcount
-            for post in get_blog_posts(self.env):
-                count += 1
-                if count == maxcount:
+            blog_posts = get_blog_posts(self.env)
+            for post in blog_posts:
+                bp = BlogPost(self.env, post[0], post[1])
+                if 'BLOG_VIEW' in req.perm(bp.resource):
+                    data['blog_post_list'].append(bp)
+                    count += 1
+                if maxcount and count == maxcount:
                     # Only display a certain number on front page (from config)
                     break
-                data['blog_post_list'].append(
-                        BlogPost(self.env, post[0], post[1]))
+            data['blog_list_title'] = "Recent posts" + \
+                    (len(blog_posts) > maxcount and \
+                        " (max %d) - Browse or Archive for more" % (maxcount,) \
+                    or '')
 
         elif command == 'archive':
             # Requesting the archive page
@@ -145,6 +151,7 @@ class FullBlogModule(Component):
         elif command == 'view' and pagename:
             # Requesting a specific blog post
             the_post = BlogPost(self.env, pagename, version)
+            req.perm(the_post.resource).require('BLOG_VIEW')
             if not the_post.version:
                 raise HTTPNotFound("No blog post named '%s'." % pagename)
             if req.method == 'POST':   # Adding/Previewing a comment
@@ -172,6 +179,8 @@ class FullBlogModule(Component):
             template = 'fullblog_edit.html'
             pagename = pagename or req.args.get('name','') or default_pagename
             the_post = BlogPost(self.env, pagename)
+            if command == 'edit':
+                req.perm(the_post.resource).require('BLOG_VIEW') # Starting point
             if req.method == 'POST':   # Create or edit a blog post
                 if 'blog-cancel' in req.args:
                     if req.args.get('action','') == 'edit':
@@ -241,21 +250,28 @@ class FullBlogModule(Component):
                 title = "Posts by author %s" % author
             if not (author or category or (from_dt and to_dt)):
                 raise HTTPNotFound("Not a valid path for viewing blog posts.")
-            data['blog_post_list'] = [BlogPost(self.env, post[0],
-                        post[1]) for post in get_blog_posts(self.env,
-                        category=category, author=author, 
-                        from_dt=from_dt, to_dt=to_dt)]
+            blog_posts = []
+            for post in get_blog_posts(self.env, category=category,
+                        author=author, from_dt=from_dt, to_dt=to_dt):
+                bp = BlogPost(self.env, post[0], post[1])
+                if 'BLOG_VIEW' in req.perm(bp.resource):
+                    blog_posts.append(bp)
+            data['blog_post_list'] = blog_posts
             data['blog_list_title'] = title
 
         else:
             raise HTTPNotFound("Not a valid blog path.")
 
-        data['blog_months'], data['blog_authors'], data['blog_categories'], \
-                data['blog_total'] = get_months_authors_categories(self.env)
-        if 'BLOG_CREATE' in req.perm('blog'):
-            add_ctxtnav(req, 'New Post', href=req.href.blog('create'),
-                    title="Create new Blog Post")
-        add_stylesheet(req, 'tracfullblog/css/fullblog.css')
+        if (not command or command == 'listing') and format == 'rss':
+            data['context'] = Context.from_request(req, absurls=True)
+            return 'fullblog.rss', data, 'application/rss+xml'
+        else:
+            data['blog_months'], data['blog_authors'], data['blog_categories'], \
+                    data['blog_total'] = get_months_authors_categories(self.env)
+            if 'BLOG_CREATE' in req.perm('blog'):
+                add_ctxtnav(req, 'New Post', href=req.href.blog('create'),
+                        title="Create new Blog Post")
+            add_stylesheet(req, 'tracfullblog/css/fullblog.css')
         return (template, data, None)
     
     # ISearchSource methods
@@ -269,8 +285,7 @@ class FullBlogModule(Component):
         is searchable by default.
         """
         if 'BLOG_VIEW' in req.perm('blog', id=None):
-            yield ('blog_posts', 'Blog Posts')
-            yield ('blog_comments', 'Blog Comments')
+            yield ('blog', 'Blog')
 
     def get_search_results(self, req, terms, filters):
         """Return a list of search results matching each search term in `terms`.
@@ -284,7 +299,8 @@ class FullBlogModule(Component):
         blog_realm = Resource('blog')
         if not 'BLOG_VIEW' in req.perm(blog_realm):
             return
-        if 'blog_posts' in filters:
+        if 'blog' in filters:
+            # Blog posts
             results = search_blog_posts(self.env, terms)
             for name, version, publish_time, author, title, body in results:
                 bp_resource = blog_realm(id=name, version=version)
@@ -292,7 +308,7 @@ class FullBlogModule(Component):
                     yield (req.href.blog(name), 'Blog: '+title,
                         publish_time, author, shorten_result(
                                 text=body, keywords=terms))
-        if 'blog_comments' in filters:
+            # Blog comments
             results = search_blog_comments(self.env, terms)
             for post_name, comment_number, comment, comment_author, \
                     comment_time in results:
@@ -317,22 +333,6 @@ class FullBlogModule(Component):
             if not 'BLOG_VIEW' in req.perm(blog_realm):
                 return
             add_stylesheet(req, 'tracfullblog/css/fullblog.css')
-
-        if 'blog' in filters and req.args.get('view', '').lower() == 'full':
-            # Full style blog posts
-            category = req.args.get('category', '')
-            author = req.args.get('author', '')
-            blog_posts = get_blog_posts(self.env, from_dt=start, to_dt=stop,
-                            author=author, category=category, all_versions=False)
-            for name, version, time, author, title, body, category_list \
-                    in blog_posts:
-                bp_resource = blog_realm(id=name)
-                if 'BLOG_VIEW' not in req.perm(bp_resource):
-                    continue
-                bp = BlogPost(self.env, name) # Use last version
-                yield ('blog', bp.publish_time, bp.author,
-                            (bp_resource, bp, None, 'full'))
-        elif 'blog' in filters:
             # Blog posts
             blog_posts = get_blog_posts(self.env, from_dt=start, to_dt=stop,
                                         all_versions=True)
@@ -343,7 +343,7 @@ class FullBlogModule(Component):
                     continue
                 bp = BlogPost(self.env, name, version=version)
                 yield ('blog', bp.version_time, bp.version_author,
-                            (bp_resource, bp, None, 'detail'))
+                            (bp_resource, bp, None))
             # Attachments (will be rendered by attachment module)
             for event in AttachmentModule(self.env).get_timeline_events(
                 req, blog_realm, start, stop):
@@ -353,14 +353,14 @@ class FullBlogModule(Component):
             blog_comments = sorted(blog_comments, key=itemgetter(4), reverse=True)
             for post_name, number, comment, author, time in blog_comments:
                 bp_resource = blog_realm(id=post_name)
-                if 'BLOG_VIEW' not in req.perm(bp):
+                if 'BLOG_VIEW' not in req.perm(bp_resource):
                     continue
                 bp = BlogPost(self.env, post_name)
                 bc = BlogComment(self.env, post_name, number=number)
-                yield ('blog', time, author, (bp_resource, bp, bc, 'detail'))
+                yield ('blog', time, author, (bp_resource, bp, bc))
 
     def render_timeline_event(self, context, field, event):
-        bp_resource, bp, bc, view = event[3]
+        bp_resource, bp, bc = event[3]
         if bc: # A blog comment
             if field == 'url':
                 return context.href.blog(bp.name) + '#comment-%d' % bc.number
@@ -373,23 +373,12 @@ class FullBlogModule(Component):
             if field == 'url':
                 return context.href.blog(bp.name)
             elif field == 'title':
-                if view=='full':
-                    return tag(tag.em(bp.title))
-                else:
-                    return tag('Blog: ', tag.em(bp.title),
-                            bp.version > 1 and ' edited' or ' created')
+                return tag('Blog: ', tag.em(bp.title),
+                        bp.version > 1 and ' edited' or ' created')
             elif field == 'description':
-                if view == 'full':
-                    # Full blog view
-                    return format_to_html(self.env,
-                        context.from_request(context.req,
-                                resource=bp_resource, absurls=True),
-                        bp.body)
-                else:
-                    # Any other regular display format
-                    return format_to_oneliner(self.env,
-                            context(resource=bp_resource),
-                            bp.version==1 and bp.body or bp.version_comment)
+                return format_to_oneliner(self.env,
+                        context(resource=bp_resource),
+                        bp.version==1 and bp.body or bp.version_comment)
 
     # ITemplateProvider methods
 

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:py="http://genshi.edgewall.org/"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="macros.rss" />
+  <channel>
+    <title>${project.name} - Blog</title>
+    <link>${abs_href.timeline()}</link>
+    <description>${blog_about.title}</description>
+    <language>en-US</language>
+    <generator>Trac ${trac.version}</generator>
+    <image py:if="chrome.logo.src">
+      <title>${project.name}</title>
+      <url>${
+        chrome.logo.src_abs and chrome.logo.src_abs or abs_href(chrome.logo.src)
+      }</url>
+      <link>${abs_href.blog()}</link>
+    </image>
+
+    <item py:for="bp in blog_post_list">
+      <title>${bp.title}</title>
+      <dc:creator>${bp.author}</dc:creator>
+      <pubDate>${http_date(bp.publish_time)}</pubDate>
+      <link>${abs_href.blog(bp.name)}</link>
+      <guid isPermaLink="true">${abs_href.blog(bp.name)}</guid>
+      <description>${to_unicode(wiki_to_html(context(bp.resource), bp.body))}</description>
+      <category py:for="cat in bp.category_list">${cat}</category>
+    </item>
+
+   </channel>
+</rss>

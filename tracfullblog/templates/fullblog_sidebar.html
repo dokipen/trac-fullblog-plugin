@@ -20,8 +20,8 @@
     <div class="sidebar-section">
       <p>
         <span class="metainfo">
-          <a href="${req.href.timeline(blog='on', view='full', format='rss')}">
-            <img src="${chrome.htdocs_location}/feed.png" />
+          <a href="${req.href.blog(format='rss')}">
+            <img src="${chrome.htdocs_location}/feed.png" /> rss
           </a>
         </span>
         Archive: <a href="${req.href.blog('archive')}">All posts</a> (${blog_total})
@@ -47,9 +47,8 @@
         <ul py:if="blog_categories">
           <li py:for="category, count in blog_categories">
             <span class="metainfo">
-              <a href="${req.href.timeline(category=category, blog='on', view='full', format='rss')}">
-                <img src="${chrome.htdocs_location}/feed.png" />
-              </a>
+              <a href="${req.href.blog('category', category, format='rss')}">
+                rss</a>
             </span> 
             <a href="${req.href.blog('category', category)}">${category}</a>
                   (${count})
@@ -65,9 +64,8 @@
         <ul>
           <li py:for="author, count in blog_authors">
             <span class="metainfo">
-              <a href="${req.href.timeline(author=author, blog='on', view='full', format='rss')}">
-                <img src="${chrome.htdocs_location}/feed.png" />
-              </a>
+              <a href="${req.href.blog('author', author, format='rss')}">
+                rss</a>
             </span> 
             <a href="${req.href.blog('author', author)}">${author}</a> (${count})</li>
         </ul>

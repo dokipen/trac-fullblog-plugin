@@ -27,7 +27,7 @@ class FullBlogCore(Component):
     
     # Options
     
-    IntOption('fullblog', 'num_items_front', 10,
+    IntOption('fullblog', 'num_items_front', 20,
         """Option to specify how many recent posts to display on the
         front page of the Blog.""")
 
