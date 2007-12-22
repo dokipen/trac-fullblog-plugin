@@ -48,6 +48,10 @@
             <py:if test="blog_comments">
               <div py:for="index, comment in enumerate(blog_comments)"
                   class="blog-comment${index % 2 == 0 and ' odd' or ' even'}" id="comment-${comment.number}">
+                <span py:if="'BLOG_ADMIN' in perm(blog_post.resource)"
+                    class="metainfo blog-comment-delete">
+                  <a href="${href.blog('delete', blog_post.name, comment=comment.number)}">Delete comment</a>
+                </span>
                 <div class="comment-info">
                     <a href="${req.href.blog(comment.post_name)}#comment-${to_unicode(comment.number)}">
                       ${comment.number}.</a>

@@ -1,0 +1,43 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Blog : Delete</title>
+  </head>
+
+  <body>
+
+    <div id="content" class="blog wiki">
+      
+      <div id="main">
+
+        <!-- Delete a comment. -->
+        <div py:if="defined('blog_comment')">
+          <h1>Delete Blog Comment</h1>
+          <p>Delete comment '${blog_comment.number}' by '${blog_comment.author}'
+             on blog post '${blog_comment.post_name}'?</p>
+          <p>This operation cannot be undone.</p>
+          <div class="buttons">
+            <form method="post"
+                  action="${href.blog('delete', blog_comment.post_name)}">
+              <div>
+                <input type="hidden" name="comment" value="${blog_comment.number}" />
+                <input type="submit" name="blog-comment-delete"
+                          value="${_('Delete blog comment')}" accesskey="d" />
+                <input type="submit" name="blog-cancel" value="Cancel" />
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </body>
+</html>

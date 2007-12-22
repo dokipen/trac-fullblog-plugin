@@ -100,10 +100,10 @@ class FullBlogModule(Component):
             version = 0
         command = pagename = ''
         command = (len(path_items) and path_items[0]) or ''
-        if command.lower() in [u'view', u'edit'] and len(path_items) == 2:
+        if command.lower() in [u'view', u'edit', 'delete'] and len(path_items) == 2:
             pagename = path_items[1]
         if command and command not in [
-                'view', 'edit', 'create', 'archive']:
+                'view', 'edit', 'create', 'archive', 'delete']:
             if len(path_items) == 1:
                 # Assume it is a request for a specific post
                 pagename = command
@@ -231,6 +231,25 @@ class FullBlogModule(Component):
                                 version_comment)
                         req.redirect(req.href.blog(the_post.name))
             data['blog_edit'] = the_post
+
+        elif command == 'delete':
+            bp = BlogPost(self.env, pagename)
+            req.perm(bp.resource).require('BLOG_ADMIN')
+            # Delete comment
+            comment = int(req.args.get('comment', ''))
+            if comment:
+                # Deleting a specific comment
+                if 'blog-cancel' in req.args:
+                    req.redirect(req.href.blog(pagename))
+                bc = BlogComment(self.env, pagename, comment)
+                if not bc.number:
+                    raise TracError(
+                            "Cannot delete. Blog post name and/or comment number missing.")
+                if req.method == 'POST' and comment and pagename:
+                    bc.delete()
+                    req.redirect(req.href.blog(pagename))
+                template = 'fullblog_delete.html'
+                data['blog_comment'] = bc
 
         elif command == 'listing':
             # 2007/10 or category/something or author/theuser

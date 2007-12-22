@@ -81,7 +81,7 @@ div.sidebar-section ul {
     list-style: none;
 }
 
-div.sidebar-section .metainfo {
+div.sidebar-section .metainfo, .blog-comment-delete {
     float: right;
 }
 
