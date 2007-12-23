@@ -31,5 +31,6 @@ setup(name='TracFullBlogPlugin',
       package_data={'tracfullblog' : ['htdocs/*.png',
                                       'htdocs/css/*.css',
                                       'htdocs/js/*.js',
-                                      'templates/*.html', ]},
+                                      'templates/*.html',
+                                      'templates/*.rss', ]},
       install_requires = [])
