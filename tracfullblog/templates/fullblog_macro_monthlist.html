@@ -9,7 +9,9 @@
           <a href="${req.href.blog(name)}">${title}</a>
           <span class="metainfo">
             &nbsp;-- Posted on ${format_datetime(time, '%Y-%m-%d %H:%M')}
-            : author <a href="${req.href.blog('author', author)}">${author}</a>
+            <py:if test="not blog_personal_blog">
+              : author <a href="${req.href.blog('author', author)}">${author}</a>
+            </py:if>
             <py:if test="categories">
               : categories
               <span py:for="cat in categories">

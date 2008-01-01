@@ -7,73 +7,70 @@ License: BSD
 (c) 2007 ::: www.CodeResort.com - BV Network AS (simon-code@bvnetwork.no)
 """
 
-from tractags.api import TaggingSystem, ITaggingSystemProvider
-tags_installed = True
 from trac.core import *
+from tractags.api import ITagProvider
 from trac.util.compat import set
 from trac.util.text import to_unicode
-from model import BlogPost, get_blog_posts, get_months_authors_categories, \
-        _parse_categories
+from trac.resource import Resource
+from model import BlogPost, _parse_categories
 
 
-class FullBlogTaggingSystem(TaggingSystem):
-    """ An implementation of a tagging system. """
+class FullBlogTagSystem(Component):
+    implements(ITagProvider)
 
-    def __init__(self, env):
-        self.env = env
+    # ITagProvider methods
+    def get_taggable_realm(self):
+        return 'blog'
 
-    def walk_tagged_names(self, names, tags, predicate):
+    def get_tagged_resources(self, req, tags):
+        if 'TAGS_VIEW' not in req.perm or 'BLOG_VIEW' not in req.perm:
+            return
+
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        tags = set([to_unicode(tag) for tag in tags])
-        names = set([to_unicode(name) for name in names])
+
         args = []
-        sql = "SELECT name, categories FROM fullblog_posts "
         constraints = []
-        if names:
-            constraints.append("name IN (" + ', '.join(['%s' for n in names]) + ")")
-            args += [to_unicode(n) for n in names]
+        sql = "SELECT name, categories FROM fullblog_posts"
         if tags:
             constraints.append("(" + ' OR '.join(["categories LIKE %s" for t in tags]) + ")")
             args += ['%' + t + '%' for t in tags]
+        else:
+            constraints.append("categories != ''")
         if constraints:
             sql += " WHERE " + " AND ".join(constraints)
-        sql += " ORDER BY name"
+        sql += " GROUP BY name ORDER BY name"
+        self.env.log.debug(sql)
         cursor.execute(sql, args)
         for row in cursor:
             post_name, categories = row[0], set(_parse_categories(row[1]))
             if not tags or categories.intersection(tags):
-                if predicate(post_name, categories):
-                    yield (post_name, categories)
-            
-    def get_name_tags(self, name):
-        return get_months_authors_categories(self.env)[2]
+                resource = Resource('blog', post_name)
+                if 'BLOG_VIEW' in req.perm(resource) and \
+                        'TAGS_VIEW' in req.perm(resource):
+                    yield (resource, categories)
 
-    def add_tags(self, req, name, tags):
-        pass
+    def get_resource_tags(self, req, resource):
+        req.perm(resource).require('BLOG_VIEW')
+        req.perm(resource).require('TAGS_VIEW')
+        return BlogPost(self.env, resource.id).category_list
 
-    def replace_tags(self, req, name, tags):
-        pass
+    def set_resource_tags(self, req, resource, tags):
+        req.perm(resource).require('TAGS_MODIFY')
+        post = BlogPost(self.env, resource.id)
+        if post.author == req.authname:
+            req.perm(resource).require('BLOG_MODIFY_OWN')
+        else:
+            req.perm(resource).require('BLOG_MODIFY_ALL')
+        post.categories = " ".join(tags)
+        post.save(req.authname, 'Blog post categories changed via Tags plugin.')
 
-    def remove_tags(self, req, name, tags):
-        pass
-
-    def remove_all_tags(self, req, name):
-        pass
-
-    def name_details(self, name):
-        bp = BlogPost(self.env, name)
-        href = self.env.href.blog(name)
-        return (href, '<a href="%s">Blog post: %s</a>' % (href, name),
-            bp.title)
-
-class FullBlogTagsProvider(Component):
-
-    implements(ITaggingSystemProvider)
-
-    def get_tagspaces_provided(self):
-        """ Iterable of tagspaces provided by this tag system. """
-        yield 'blog'
-
-    def get_tagging_system(self, tagspace):
-        return FullBlogTaggingSystem(self.env)
+    def remove_resource_tags(self, req, resource):
+        req.perm(resource).require('TAGS_MODIFY')
+        post = BlogPost(self.env, resource.id)
+        if post.author == req.authname:
+            req.perm(resource).require('BLOG_MODIFY_OWN')
+        else:
+            req.perm(resource).require('BLOG_MODIFY_ALL')
+        post.categories = ""
+        post.save(req.authname, 'Blog post categories removed via Tags plugin.')

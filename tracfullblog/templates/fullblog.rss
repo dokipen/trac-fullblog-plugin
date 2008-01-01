@@ -5,15 +5,13 @@
   <xi:include href="macros.rss" />
   <channel>
     <title>${project.name} - Blog</title>
-    <link>${abs_href.timeline()}</link>
+    <link>${abs_href.blog()}</link>
     <description>${blog_about.title}</description>
     <language>en-US</language>
     <generator>Trac ${trac.version}</generator>
     <image py:if="chrome.logo.src">
       <title>${project.name}</title>
-      <url>${
-        chrome.logo.src_abs and chrome.logo.src_abs or abs_href(chrome.logo.src)
-      }</url>
+      <url>$chrome.logo.src</url>
       <link>${abs_href.blog()}</link>
     </image>
 

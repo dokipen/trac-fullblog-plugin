@@ -41,7 +41,23 @@
       <p py:if="not blog_categories">No posts.</p>
     </div>
     
-    <div class="sidebar-section">
+    <div class="sidebar-section"
+          py:if="not blog_personal_blog">
+      <py:if test="blog_authors">
+        <p>Browse by author:</p>
+        <ul>
+          <li py:for="author, count in blog_authors">
+            <span class="metainfo">
+              <a href="${req.href.blog('author', author, format='rss')}">
+                rss</a>
+            </span> 
+            <a href="${req.href.blog('author', author)}">${author}</a> (${count})</li>
+        </ul>
+      </py:if>
+      <p py:if="not blog_authors">No authors.</p>
+    </div>
+
+    <div class="sidebar-section${not blog_infotext and ' last' or None}">
       <py:if test="blog_categories">
         <p>Browse by category:</p>
         <ul py:if="blog_categories">
@@ -56,21 +72,6 @@
         </ul>
       </py:if>
       <p py:if="not blog_categories">No categories.</p>
-    </div>
-
-    <div class="sidebar-section${not blog_infotext and ' last' or None}">
-      <py:if test="blog_authors">
-        <p>Browse by author:</p>
-        <ul>
-          <li py:for="author, count in blog_authors">
-            <span class="metainfo">
-              <a href="${req.href.blog('author', author, format='rss')}">
-                rss</a>
-            </span> 
-            <a href="${req.href.blog('author', author)}">${author}</a> (${count})</li>
-        </ul>
-      </py:if>
-      <p py:if="not blog_authors">No authors.</p>
     </div>
 
     <div py:if="blog_infotext" id="blog-infotext" class="sidebar-section last">

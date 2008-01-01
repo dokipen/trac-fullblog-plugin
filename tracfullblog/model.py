@@ -498,5 +498,5 @@ class BlogPost(object):
             self.version_author = row[5]
             self.author = row[6]
             self.categories = row[7]
-            self.category_list = _parse_categories(row[7])
+            self.category_list = set(_parse_categories(row[7]))
         return True

@@ -17,7 +17,7 @@ from operator import itemgetter
 # Trac and Genshi imports
 from genshi.builder import tag
 from trac.attachment import AttachmentModule
-from trac.config import ListOption
+from trac.config import ListOption, BoolOption
 from trac.core import *
 from trac.mimeview.api import Context
 from trac.resource import Resource
@@ -28,7 +28,7 @@ from trac.util.datefmt import to_datetime, to_unicode, utc, localtz
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
-                            add_stylesheet, add_warning, add_ctxtnav
+                            add_stylesheet, add_link, add_warning, add_ctxtnav
 from trac.wiki.formatter import format_to_oneliner, format_to_html
 
 # Imports from same package
@@ -50,6 +50,10 @@ class FullBlogModule(Component):
         If empty it will make a list from default locale setting.
         Enter list of 12 months like:
         `month_names = January, February, ..., December` """)
+    BoolOption('fullblog', 'personal_blog', False,
+        """When using the Blog as a personal blog (only one author), setting to 'True'
+        will disable the display of 'Browse by author:' in sidebar, and also removes
+        various author links and references. """)
 
     # INavigationContributor methods
     
@@ -142,11 +146,15 @@ class FullBlogModule(Component):
                     (len(blog_posts) > maxcount and \
                         " (max %d) - Browse or Archive for more" % (maxcount,) \
                     or '')
+            add_link(req, 'alternate', req.href.blog(format='rss'), 'RSS Feed',
+                     'application/rss+xml', 'rss')
 
         elif command == 'archive':
             # Requesting the archive page
             template = 'fullblog_archive.html'
             data['blog_archive'] = group_posts_by_month(get_blog_posts(self.env))
+            add_link(req, 'alternate', req.href.blog(format='rss'), 'RSS Feed',
+                     'application/rss+xml', 'rss')
 
         elif command == 'view' and pagename:
             # Requesting a specific blog post
@@ -235,12 +243,11 @@ class FullBlogModule(Component):
         elif command == 'delete':
             bp = BlogPost(self.env, pagename)
             req.perm(bp.resource).require('BLOG_ADMIN')
-            # Delete comment
-            comment = int(req.args.get('comment', ''))
+            if 'blog-cancel' in req.args:
+                req.redirect(req.href.blog(pagename))
+            comment = int(req.args.get('comment', '0'))
             if comment:
                 # Deleting a specific comment
-                if 'blog-cancel' in req.args:
-                    req.redirect(req.href.blog(pagename))
                 bc = BlogComment(self.env, pagename, comment)
                 if not bc.number:
                     raise TracError(
@@ -250,6 +257,25 @@ class FullBlogModule(Component):
                     req.redirect(req.href.blog(pagename))
                 template = 'fullblog_delete.html'
                 data['blog_comment'] = bc
+            else:
+                # Delete a version of a blog post or all versions
+                # with comments and attachments if only version.
+                if not bp.version:
+                    raise TracError(
+                            "Cannot delete. Blog post '%s' does not exist." % (
+                                    bp.name))
+                version = int(req.args.get('version', '0'))
+                if req.method == 'POST':
+                    if 'blog-version-delete' in req.args:
+                        if bp.version != version:
+                            raise TracError(
+                                "Cannot delete. Can only delete most recent version.")
+                        bp.delete(version=bp.versions[-1])
+                    elif 'blog-delete' in req.args:
+                        bp.delete()
+                    req.redirect(req.href.blog(pagename))
+                template = 'fullblog_delete.html'
+                data['blog_post'] = bp
 
         elif command == 'listing':
             # 2007/10 or category/something or author/theuser
@@ -258,15 +284,21 @@ class FullBlogModule(Component):
             if from_dt:
                 title = "Posts for the month of %s %d" % (
                         blog_month_names[from_dt.month -1], from_dt.year)
+                add_link(req, 'alternate', req.href.blog(format='rss'), 'RSS Feed',
+                        'application/rss+xml', 'rss')
 
             category = (path_items[0].lower() == 'category'
                         and path_items[1]) or ''
             if category:
                 title = "Posts in category %s" % category
+                add_link(req, 'alternate', req.href.blog('category', category, format='rss'),
+                    'RSS Feed', 'application/rss+xml', 'rss')
             author = (path_items[0].lower() == 'author'
                         and path_items[1]) or ''
             if author:
                 title = "Posts by author %s" % author
+                add_link(req, 'alternate', req.href.blog('author', author, format='rss'),
+                    'RSS Feed', 'application/rss+xml', 'rss')
             if not (author or category or (from_dt and to_dt)):
                 raise HTTPNotFound("Not a valid path for viewing blog posts.")
             blog_posts = []
@@ -277,7 +309,6 @@ class FullBlogModule(Component):
                     blog_posts.append(bp)
             data['blog_post_list'] = blog_posts
             data['blog_list_title'] = title
-
         else:
             raise HTTPNotFound("Not a valid blog path.")
 
@@ -291,6 +322,8 @@ class FullBlogModule(Component):
                 add_ctxtnav(req, 'New Post', href=req.href.blog('create'),
                         title="Create new Blog Post")
             add_stylesheet(req, 'tracfullblog/css/fullblog.css')
+            data['blog_personal_blog'] = self.env.config.getbool('fullblog',
+                                                    'personal_blog')
         return (template, data, None)
     
     # ISearchSource methods

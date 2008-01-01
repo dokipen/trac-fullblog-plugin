@@ -14,7 +14,7 @@
           (Updated: ${format_datetime(post.version_time, '%Y-%m-%d %H:%M')})
         </span>
       </li>
-      <li class="metaauthor">Author:
+      <li class="metaauthor" py:if="not blog_personal_blog">Author:
         <a href="${req.href.blog('author', post.author)}">${post.author}</a> </li>
       <li class="metacategories">Categories:
         <py:for each="cat in post.category_list">
