@@ -61,7 +61,7 @@
                 <div class="comment-info">
                     <a href="${req.href.blog(comment.post_name)}#comment-${to_unicode(comment.number)}">
                       ${comment.number}.</a>
-                    ${comment.author} --
+                    ${format_author(comment.author)} --
                     ${format_datetime(comment.time, '%Y-%m-%d %H:%M')}</div>
                 <div class="comment-body">${wiki_to_html(context, comment.comment)}</div>
               </div>
