@@ -79,7 +79,7 @@
                     <fieldset>
                       <legend>Comment preview</legend>
                       <div class="comment-info">
-                        ${blog_comment.author} --
+                        ${format_author(blog_comment.author)} --
                         ${format_datetime(blog_comment.time, '%Y-%m-%d %H:%M')}
                       </div>
                       <div class="comment_body">${wiki_to_html(context, blog_comment.comment)}</div>
