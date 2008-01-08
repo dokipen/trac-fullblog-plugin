@@ -31,15 +31,20 @@ class FullBlogTagSystem(Component):
 
         args = []
         constraints = []
-        sql = "SELECT name, categories FROM fullblog_posts"
+        sql = "SELECT bp1.name, bp1.categories, bp1.version " \
+               "FROM fullblog_posts bp1," \
+               "(SELECT name, max(version) AS ver " \
+               "FROM fullblog_posts GROUP BY name) bp2 " \
+               "WHERE bp1.version = bp2.ver AND bp1.name = bp2.name"
         if tags:
-            constraints.append("(" + ' OR '.join(["categories LIKE %s" for t in tags]) + ")")
+            constraints.append("(" + ' OR '.join(
+                            ["bp1.categories LIKE %s" for t in tags]) + ")")
             args += ['%' + t + '%' for t in tags]
         else:
-            constraints.append("categories != ''")
+            constraints.append("bp1.categories != ''")
         if constraints:
-            sql += " WHERE " + " AND ".join(constraints)
-        sql += " GROUP BY name ORDER BY name"
+            sql += " AND " + " AND ".join(constraints)
+        sql += " ORDER BY bp1.name"
         self.env.log.debug(sql)
         cursor.execute(sql, args)
         for row in cursor:

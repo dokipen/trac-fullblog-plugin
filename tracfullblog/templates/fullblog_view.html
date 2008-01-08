@@ -50,7 +50,7 @@
 
           <!--! View comments -->
           <div id="comments" py:with="blog_comments = blog_post.get_comments()">
-            <h2 id="comment header">Comments</h2>
+            <h2 id="comment-header">Comments</h2>
             <py:if test="blog_comments">
               <div py:for="index, comment in enumerate(blog_comments)"
                   class="blog-comment${index % 2 == 0 and ' odd' or ' even'}" id="comment-${comment.number}">
