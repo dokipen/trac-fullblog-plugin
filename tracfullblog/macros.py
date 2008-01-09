@@ -26,20 +26,30 @@ class BlogListMacro(WikiMacroBase):
     {{{
     [[BlogList]]
     }}}
+    
+    Available named arguments:
+     * `recent=` - max. number of posts
+     * `category=` - a category
+     * `author=` - an author
+     * `period=` - time period of the format YYYY/MM
+     * `heading=` - a heading for the list
+     * `format=` - type of display (see below for details)
+     * `max_size=` - max. number of characters to render for each post
 
-    Example showing all available named arguments:
+    Example showing some available named arguments:
     {{{
-    [[BlogList(recent=5, category=trac, period=2007/12, author=osimons, format=float, heading=Some Trac Posts)]]
+    [[BlogList(recent=5, max_size=250, period=2007/12, author=osimons, format=float, heading=Some Trac Posts)]]
     }}}
     
     The arguments for criteria are 'AND'-based, so the above example will render
-    at most 5 posts by 'osimons' in December 2007 with category 'trac'. 
+    at most 5 posts by 'osimons' in December 2007. 
     
     There is no heading unless specified.
     
     Without restriction on recent number of posts, it will use the number currently
     active in the Blog module as default for 'float' and 'full' rendering, but for rendering
-    of 'inline' list it will render all found as default unless restricted.
+    of 'inline' list it will render all found as default unless restricted. Additionally for
+    'float' and 'full' it will truncate content if it is larger than a max_size (if set).
     
     The `format=` keyword argument supports rendering these formats:
     ||`format=inline`||Renders an unordered list in the normal text flow (default).||
@@ -61,6 +71,7 @@ class BlogListMacro(WikiMacroBase):
         recent = int(args_dict.get('recent', 0))
         format = args_dict.get('format', 'inline').lower()
         heading = args_dict.get('heading', '')
+        max_size = int(args_dict.get('max_size', 0))
 
         # Get blog posts
         all_posts = get_blog_posts(self.env, author=author, category=category,
@@ -94,18 +105,19 @@ class BlogListMacro(WikiMacroBase):
 
         elif format == 'full':
             return self._render_full_format(formatter, post_list,
-                                            post_instances, heading)
+                                            post_instances, heading, max_size)
 
         elif format == 'float':
             # Essentially a 'full' list - just wrapped inside a new div
             return tag.div(self._render_full_format(formatter, post_list,
-                                            post_instances, heading),
+                                    post_instances, heading, max_size),
                             class_="blogflash")
 
         else:
             raise TracError("Invalid 'format' argument used for macro %s." % name)
 
-    def _render_full_format(self, formatter, post_list, post_instances, heading):
+    def _render_full_format(self, formatter, post_list, post_instances, heading,
+                                    max_size):
         """ Renters full blog posts. """
         out = tag.div(class_="blog")
         out.append(tag.div(heading, class_="blog-list-title"))
@@ -113,6 +125,8 @@ class BlogListMacro(WikiMacroBase):
             data = {'post': post,
                     'list_mode': True,
                     'execute_blog_macro': True}
+            if max_size:
+                data['blog_max_size'] = max_size
             out.append(Chrome(self.env).render_template(formatter.req,
                 'fullblog_macro_post.html', data=data, fragment=True))
         return out

@@ -115,6 +115,16 @@ div.blogflash {
     width: 400px;
 }
 
+div.blogflash h2, div.blogflash h3 {
+    margin-left: 0;
+    font-size: 1.2em;
+} 
+
+div.blogflash h3 {
+    margin-left: 0;
+    font-size: 1.1em;
+}
+
 div.blogflash .blog-title {
     font-size: 1.35em;
     margin-left: 0;

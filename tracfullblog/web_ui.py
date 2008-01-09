@@ -420,7 +420,8 @@ class FullBlogModule(Component):
                 return tag('Blog: ', tag.em(bp.title), ' comment added')
             elif field == 'description':
                 return format_to_oneliner(self.env,
-                            context(resource=bp_resource), bc.comment)
+                            context(resource=bp_resource), bc.comment,
+                            shorten=True)
         else: # A blog post
             if field == 'url':
                 return context.href.blog(bp.name)
@@ -430,7 +431,8 @@ class FullBlogModule(Component):
             elif field == 'description':
                 return format_to_oneliner(self.env,
                         context(resource=bp_resource),
-                        bp.version==1 and bp.body or bp.version_comment)
+                        bp.version==1 and bp.body or bp.version_comment,
+                        shorten=True)
 
     # ITemplateProvider methods
 
