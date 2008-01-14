@@ -20,10 +20,18 @@ from trac.resource import IResourceManager
 from trac.wiki.api import IWikiSyntaxProvider
 
 # Relative imports (same package)
+from api import IBlogChangeListener, IBlogManipulator
 from model import BlogPost, BlogComment
 
 
 class FullBlogCore(Component):
+    """ Module implementing features that are common and shared
+    between the various parts of the plugin. """
+
+    # Extensions
+    
+    listeners = ExtensionPoint(IBlogChangeListener)
+    manipulators = ExtensionPoint(IBlogManipulator)
     
     # Options
     
@@ -31,6 +39,7 @@ class FullBlogCore(Component):
         """Option to specify how many recent posts to display on the
         front page of the Blog.""")
 
+    default_pagename = 'change_this_post_shortname'
     reserved_names = ['create', 'view', 'edit', 'delete',
                     'archive', 'category', 'author']
     
@@ -141,3 +150,103 @@ class FullBlogCore(Component):
             return True
         except:
             return False
+    
+    # CRUD methods that support input verification and listener and manipulator APIs
+    
+    def create_post(self, req, bp, version_author, version_comment=u'', verify_only=False):
+        """ Creates a new post, or a new version of existing post.
+        Does some input verification.
+        Supports manipulator and listener plugins.
+        Returns [] for success, or a list of (field, message) tuples if not."""
+        warnings = []
+        # Do basic checking for content existence
+        warnings.extend(bp.save(version_author, version_comment, verify_only=True))
+        # Do some more fundamental checking
+        if bp.name in self.reserved_names:
+            warnings.append((req, "'%s' is a reserved name. Please change." % bp.name))
+        if bp.name == self.default_pagename:
+            warning.append(('post_name', "The default page shortname must be changed."))
+        # Check if any plugins has objections with the contents
+        fields = {
+            'title': bp.title,
+            'body': bp.body,
+            'author': bp.author,
+            'version_comment': version_comment,
+            'version_author': version_author,
+            'categories': bp.categories,
+            'category_list': bp.category_list}
+        for manipulator in self.manipulators:
+            warnings.extend(manipulator.validate_blog_post(
+                                                req, bp.name, fields))
+        if warnings or verify_only:
+            return warnings
+        # All seems well - save and notify
+        warnings.extend(bp.save(version_author, version_comment))
+        for listener in self.listeners:
+            listener.blog_post_changed(bp.name, bp.version)
+        return warnings
+        
+    def delete_post(self, bp, version=0):
+        """ Deletes a blog post (version=0 for all versions, or specific version=N).
+        Notifies listeners if successful.
+        Returns [] for success, or a list of (field, message) tuples if not."""
+        warnings = []
+        fields = bp._fetch_fields(version)
+        if not fields:
+            warnings.append(('', "Post and/or version does not exist."))
+        # Inital checking. Return if there are problems.
+        if warnings:
+            return warnings
+        # Do delete
+        is_deleted = bp.delete(version)
+        if not is_deleted:
+            warnings.append(('', "Unknown error. Not deleted."))
+        if is_deleted:
+            version = bp.get_versions() and fields['version'] or 0 # Any versions left?
+            for listener in self.listeners:
+                    listener.blog_post_deleted(bp.name, version, fields)
+                    if not version: # Also notify that all comments are deleted
+                        listener.blog_comment_deleted(bp.name, 0, {})
+        return warnings
+    
+    def create_comment(self, req, bc, verify_only=False):
+        """ Create a comment. Comment and author set on the bc (comment) instance:
+        * Calls manipulators and bc.create() (if not verify_only) collecting warnings
+        * Calls listeners on success
+        Returns [] for success, or a list of (field, message) tuples if not."""
+        # Check for errors
+        warnings = []
+        # Verify the basics such as content existence, duplicates, post existence
+        warnings.extend(bc.create(verify_only=True))
+        # Now test plugins to see if new issues are raised.
+        fields = {'comment': bc.comment,
+                  'author': bc.author}
+        for manipulator in self.manipulators:
+            warnings.extend(
+                manipulator.validate_blog_comment(req, bc.post_name, fields))
+        if warnings or verify_only:
+            return warnings
+        # No problems (we think), try to save.
+        warnings.extend(bc.create())
+        if not warnings:
+            for listener in self.listeners:
+                listener.blog_comment_added(bc.post_name, bc.number)
+        return warnings
+    
+    def delete_comment(self, bc):
+        """ Deletes the comment (bc), and notifies listeners.
+        Returns [] for success, or a list of (field, message) tuples if not."""
+        warnings = []
+        fields = {'post_name': bc.post_name,
+                  'number': bc.number,
+                  'comment': bc.comment,
+                  'author': bc.author,
+                  'time': bc.time}
+        is_deleted = bc.delete()
+        if is_deleted:
+            for listener in self.listeners:
+                listener.blog_comment_deleted(
+                        fields['post_name'], fields['number'], fields)
+        else:
+            warnings.append(('', "Unknown error. Not deleted."))
+        return warnings

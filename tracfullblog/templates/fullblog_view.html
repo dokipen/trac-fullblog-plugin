@@ -77,7 +77,10 @@
                   <div py:if="defined('blog_comment')"
                           id="preview" class="blog-comment">
                     <fieldset>
-                      <legend>Comment preview</legend>
+                      <legend>
+                        Comment preview
+                        <a py:if="req.chrome.warnings" href="#warning">(Warnings)</a>
+                      </legend>
                       <div class="comment-info">
                         ${format_author(blog_comment.author)} --
                         ${format_datetime(blog_comment.time, '%Y-%m-%d %H:%M')}

@@ -12,6 +12,7 @@ License: BSD
 import datetime
 from operator import itemgetter
 
+from trac.core import ExtensionPoint
 from trac.attachment import Attachment
 from trac.resource import Resource
 from trac.search import search_to_sql
@@ -268,26 +269,39 @@ class BlogComment(object):
         if number:
             self._load_comment(number)
     
-    def create(self, comment='', author=''):
+    def create(self, comment='', author='', verify_only=False):
         """ Creates a comment in the database.
         Comment and author needs to be set either by passing values
         as args, or previously setting them as properties on the object
-        and not passing values. """
+        and not passing values.
+        
+        If something prevents the comment from being created, it will
+        return a list of tuple objects with (field, reason). A general
+        error will be denoted by empty field - ('', 'reason').
+        
+        If comment is created and all is well, an empty list ([]) is returned."""
         comment = comment or self.comment
         author = author or self.author
-        if not (comment and author):
-            return False
+        # Check for errors
+        warnings = []
+        if not comment:
+            warnings.append(('comment', 'Comment is empty.'))
+        if not author:
+            warnings.append(('author', 'No comment author.'))
+        if not self.post_name:
+            warnings.append(('post_name',
+                            'The comment is not attached to a blog post'))
         if self.number:
-            return False
-        if not comment or not author:
-            return False
-        cnx = self.env.get_db_cnx()
-        cursor = cnx.cursor()
+            warnings.append(('number', 'Comment seems to already exist?'))
         number = self._next_comment_number()
         if not number:
-            self.env.log.debug("Cannot create comment from %r as post %r "
-                "does not exist." % (author, self.post_name))
-            return False
+            warnings.append(('', "Post '%s' does not exist." % self.post_name))
+         # Bail out if there are issues, or verify only
+        if warnings or verify_only:
+            return warnings
+        # No problems (we think), try to save.
+        cnx = self.env.get_db_cnx()
+        cursor = cnx.cursor()
         self.env.log.debug("Creating blog comment number %d for %r" % (
                 number, self.post_name))
         cursor.execute("INSERT INTO fullblog_comments "
@@ -295,10 +309,10 @@ class BlogComment(object):
                 number, comment, author, to_timestamp(self.time)) )
         cnx.commit()
         self._load_comment(number)
-        return True
+        return warnings
     
     def delete(self):
-        if not self.post_name and not self.number:
+        if not self.post_name or not self.number:
             return False
         cnx = self.env.get_db_cnx()
         cursor = cnx.cursor()
@@ -374,7 +388,7 @@ class BlogPost(object):
         self.name = name
         self._load_post(version)
         
-    def save(self, version_author, version_comment=u''):
+    def save(self, version_author, version_comment=u'', verify_only=False):
         """ Saves the post as a new version in the database.
         Returns True if saved, False if aborted for some reason.
         As this does not check for changes, the common usage is:
@@ -382,12 +396,15 @@ class BlogPost(object):
                 the_post.save('the_user', 'My view on things.')
             else:
                 print 'New version not saved as no changes made.' """
-        if not (self.name and self.title and self.body and self.author \
-                and version_author):
-            self.env.log.debug("Cannot create new version of blog entry %r "
-                "as name, title, body, author or version_author is missing" % (
-                        self.name,) )
-            return False
+        warnings = []
+        if not version_author:
+            warnings.append(('version_author', 'Version author missing'))
+        for attr in ['name', 'title', 'body', 'author']:
+            if not getattr(self, attr):
+                warnings.append((attr, '%s is empty.' % attr.capitalize()))
+        # Return if initial problems, or only verification was wanted
+        if warnings or verify_only:
+            return warnings
         version_time = to_timestamp(datetime.datetime.now(utc))
         self.versions = sorted(self.get_versions())
         version = 1
@@ -406,7 +423,7 @@ class BlogPost(object):
                 version_comment, version_author, self.author, self.categories))
         cnx.commit()
         self._load_post(version)
-        return True
+        return warnings
     
     def update_fields(self, fields={}):
         """" Takes in a dictionary of arbitrary number of fields with
@@ -470,16 +487,16 @@ class BlogPost(object):
                         comment[1]) for comment in comments]
     
     # Internal methods
-
-    def _load_post(self, version=0):
-        """ Loads the record from the database into the object.
-        Will load the most recent if none is specified.
-        Also creates a Resource instance for the object. """
-        self.resource = Resource('blog', self.name)
+    
+    def _fetch_fields(self, version=0):
+        """ Returns a dict with field/value combinations for the content
+        of a specific version of a blog post, or last/current version if
+        version is 0.
+        Returns emtpy dict if no such post or post/version exists. """
         self.versions = self.get_versions()
         if not self.versions or (version and not version in self.versions):
             # No blog post with the name exists
-            return False
+            return {}
         version = version or self.versions[-1]
         cnx = self.env.get_db_cnx()
         cursor = cnx.cursor()
@@ -488,15 +505,28 @@ class BlogPost(object):
                 "FROM fullblog_posts "
                 "WHERE name=%s AND version=%s",
                 (self.name, version) )
+        fields = {}
         for row in cursor:
-            self.version = version
-            self.title = row[0]
-            self.body = row[1]
-            self.publish_time = to_datetime(row[2], utc)
-            self.version_time = to_datetime(row[3], utc)
-            self.version_comment = row[4]
-            self.version_author = row[5]
-            self.author = row[6]
-            self.categories = row[7]
-            self.category_list = set(_parse_categories(row[7]))
+            fields['version'] = version
+            fields['title'] = row[0]
+            fields['body'] = row[1]
+            fields['publish_time'] = to_datetime(row[2], utc)
+            fields['version_time'] = to_datetime(row[3], utc)
+            fields['version_comment'] = row[4]
+            fields['version_author'] = row[5]
+            fields['author'] = row[6]
+            fields['categories'] = row[7]
+            fields['category_list'] = set(_parse_categories(row[7]))
+        return fields
+
+    def _load_post(self, version=0):
+        """ Loads the record from the database into the object.
+        Will load the most recent if none is specified.
+        Also creates a Resource instance for the object."""
+        self.resource = Resource('blog', self.name)
+        fields = self._fetch_fields(version)
+        if not fields:
+            return False
+        for field in fields:
+            setattr(self, field, fields[field])
         return True

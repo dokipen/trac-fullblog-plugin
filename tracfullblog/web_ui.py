@@ -28,7 +28,7 @@ from trac.util.datefmt import to_datetime, to_unicode, utc, localtz
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
-                            add_stylesheet, add_link, add_warning, add_ctxtnav
+                    add_stylesheet, add_link, add_warning, add_notice, add_ctxtnav
 from trac.wiki.formatter import format_to_oneliner, format_to_html
 
 # Imports from same package
@@ -89,7 +89,7 @@ class FullBlogModule(Component):
         """ Processing the request. """
 
         blog_core = FullBlogCore(self.env)
-        default_pagename = 'change_this_post_shortname'
+        default_pagename = blog_core.default_pagename
         reserved_names = blog_core.reserved_names
 
         format = req.args.get('format', '').lower()
@@ -170,14 +170,23 @@ class FullBlogModule(Component):
                 comment.author = (req.authname != 'anonymous' and req.authname) \
                             or req.args.get('author')
                 comment.time = datetime.datetime.now(utc)
+                warnings = []
                 if 'cancelcomment' in req.args:
-                    req.redirect(req.href.blog(pagename))                
+                    req.redirect(req.href.blog(pagename))
                 elif 'previewcomment' in req.args:
-                    data['blog_comment'] = comment
-                elif 'submitcomment' in req.args:
-                    comment.create()
-                    req.redirect(req.href.blog(pagename
+                    warnings.extend(blog_core.create_comment(req, comment, verify_only=True))
+                elif 'submitcomment' in req.args and not warnings:
+                    warnings.extend(blog_core.create_comment(req, comment))
+                    if not warnings:
+                        req.redirect(req.href.blog(pagename
                                 )+'#comment-'+str(comment.number))
+                data['blog_comment'] = comment
+                # Push all warnings out to the user.
+                for field, reason in warnings:
+                    if field:
+                        add_warning(req, "Field '%s': %s" % (field, reason))
+                    else:
+                        add_warning(req, reason)
             data['blog_post'] = the_post
             context = Context.from_request(req, the_post.resource)
             data['context'] = context
@@ -204,40 +213,38 @@ class FullBlogModule(Component):
                     else:
                         req.perm(the_post.resource).require('BLOG_MODIFY_ALL')
                 # Input verifications and warnings
+                warnings = []
                 if command == 'create' and the_post.version:
-                    add_warning(req, "A post named '%s' already exists. " % (
-                            the_post.name,))
+                    warning.append(
+                            ('', "A post named '%s' already exists. " % the_post.name))
                     the_post = BlogPost(self.env, default_pagename)
-                elif the_post.name == default_pagename:
-                    add_warning(req, "The default page shortname must be changed.")
-                elif the_post.name in reserved_names:
-                    add_warning(req, "'%s' is a reserved name. Please change." % (
-                                    the_post.name,))
                 orig_author = the_post.author
-                is_updated = the_post.update_fields(req.args)
-                if not the_post.title:
-                    add_warning(req, "Title required.")
-                if not the_post.body:
-                    add_warning(req, "Blog post body required.")
+                if not the_post.update_fields(req.args):
+                    warnings.append(('', "None of the fields have changed."))
                 version_comment = req.args.get('new_version_comment', '')
                 if 'blog-preview' in req.args:
-                    context = Context.from_request(req, the_post.resource)
-                    data['context'] = context
-                    data['blog_attachments'] = AttachmentModule(self.env).attachment_data(context)
-                    data['blog_action'] = 'preview'
-                    data['blog_version_comment'] = version_comment
-                    if (orig_author and orig_author != the_post.author) and (
-                            not 'BLOG_MODIFY_ALL' in req.perm(the_post.resource)):
-                        add_warning(req, "If you change the author you cannot " \
-                            "edit the post again due to restricted permissions.")
-                        data['blog_orig_author'] = orig_author
-                elif 'blog-save' in req.args:
-                    if not is_updated:
-                        add_warning("No changes made. New version not created.")
-                    if not req.chrome['warnings']:
-                        the_post.save(req.authname,
-                                version_comment)
+                    warnings.extend(blog_core.create_post(
+                            req, the_post, req.authname, version_comment, verify_only=True))
+                elif 'blog-save' in req.args and not warnings:
+                    warnings.extend(blog_core.create_post(
+                            req, the_post, req.authname, version_comment))
+                    if not warnings:
                         req.redirect(req.href.blog(the_post.name))
+                context = Context.from_request(req, the_post.resource)
+                data['context'] = context
+                data['blog_attachments'] = AttachmentModule(self.env).attachment_data(context)
+                data['blog_action'] = 'preview'
+                data['blog_version_comment'] = version_comment
+                if (orig_author and orig_author != the_post.author) and (
+                        not 'BLOG_MODIFY_ALL' in req.perm(the_post.resource)):
+                    add_notice(req, "If you change the author you cannot " \
+                        "edit the post again due to restricted permissions.")
+                    data['blog_orig_author'] = orig_author
+                for field, reason in warnings:
+                    if field:
+                        add_warning(req, "Field '%s': %s" % (field, reason))
+                    else:
+                        add_warning(req, reason)                        
             data['blog_edit'] = the_post
 
         elif command == 'delete':
@@ -246,6 +253,7 @@ class FullBlogModule(Component):
             if 'blog-cancel' in req.args:
                 req.redirect(req.href.blog(pagename))
             comment = int(req.args.get('comment', '0'))
+            warnings = []
             if comment:
                 # Deleting a specific comment
                 bc = BlogComment(self.env, pagename, comment)
@@ -253,8 +261,9 @@ class FullBlogModule(Component):
                     raise TracError(
                             "Cannot delete. Blog post name and/or comment number missing.")
                 if req.method == 'POST' and comment and pagename:
-                    bc.delete()
-                    req.redirect(req.href.blog(pagename))
+                    warnings.extend(blog_core.delete_comment(bc))
+                    if not warnings:
+                        req.redirect(req.href.blog(pagename))
                 template = 'fullblog_delete.html'
                 data['blog_comment'] = bc
             else:
@@ -270,12 +279,18 @@ class FullBlogModule(Component):
                         if bp.version != version:
                             raise TracError(
                                 "Cannot delete. Can only delete most recent version.")
-                        bp.delete(version=bp.versions[-1])
+                        warnings.extend(blog_core.delete_post(bp, version=bp.versions[-1]))
                     elif 'blog-delete' in req.args:
-                        bp.delete()
-                    req.redirect(req.href.blog(pagename))
+                        warnings.extend(blog_core.delete_post(bp, version=0))
+                    if not warnings:
+                        req.redirect(req.href.blog(pagename))
                 template = 'fullblog_delete.html'
                 data['blog_post'] = bp
+            for field, reason in warnings:
+                if field:
+                    add_warning(req, "Field '%s': %s" % (field, reason))
+                else:
+                    add_warning(req, reason)                        
 
         elif command == 'listing':
             # 2007/10 or category/something or author/theuser
