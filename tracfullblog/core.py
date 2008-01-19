@@ -21,7 +21,7 @@ from trac.wiki.api import IWikiSyntaxProvider
 
 # Relative imports (same package)
 from api import IBlogChangeListener, IBlogManipulator
-from model import BlogPost, BlogComment
+from model import BlogPost, BlogComment, get_blog_resources
 
 
 class FullBlogCore(Component):
@@ -151,6 +151,24 @@ class FullBlogCore(Component):
         except:
             return False
     
+    def get_prev_next_posts(self, perm, post_name):
+        """ Returns the name of the next and previous posts when compared with
+        input 'post_name'. """
+        prev = next = marker = ''
+        found = False
+        for post in get_blog_resources(self.env):
+            if not 'BLOG_VIEW' in perm(post):
+                continue
+            if post.id == post_name:
+                next = marker
+                found = True
+                continue
+            if found:
+                prev = post.id
+                break
+            marker = post.id
+        return prev, next
+
     # CRUD methods that support input verification and listener and manipulator APIs
     
     def create_post(self, req, bp, version_author, version_comment=u'', verify_only=False):

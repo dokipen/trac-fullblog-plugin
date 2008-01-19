@@ -23,7 +23,7 @@ from trac.util.text import to_unicode
 __all__ = ['BlogComment', 'BlogPost', 'get_months_authors_categories',
            'search_blog_posts', 'search_blog_comments',
            'get_blog_posts', 'get_blog_comments',
-           'group_posts_by_month']
+           'group_posts_by_month', 'get_blog_resources']
 
 # Public functions
 
@@ -205,6 +205,19 @@ def get_months_authors_categories(env, from_dt=None, to_dt=None):
             [(a, a_dict.get(a, 0)) for a in sorted(a_dict.keys())],
             [(c, c_dict.get(c, 0)) for c in sorted(c_dict.keys())],
             total )
+
+def get_blog_resources(env):
+    """ Returns a list of resource instances of existing blog posts (current
+    version). The list is ordered by publish_time (newest first). """
+    cnx = env.get_db_cnx()
+    cursor = cnx.cursor()
+    sql = "SELECT bp1.name FROM fullblog_posts bp1, " \
+          "(SELECT name, max(version) AS ver FROM fullblog_posts " \
+          "GROUP BY name) bp2 WHERE bp1.name = bp2.name AND " \
+          "bp1.version = ver ORDER BY bp1.publish_time DESC"
+    cursor.execute(sql)
+    blog_realm = Resource('blog')
+    return [blog_realm(id=post[0], version=0) for post in cursor]
 
 # Utility functions
 

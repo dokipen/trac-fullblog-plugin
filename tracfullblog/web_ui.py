@@ -28,7 +28,7 @@ from trac.util.datefmt import to_datetime, to_unicode, utc, localtz
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
-                    add_stylesheet, add_link, add_warning, add_notice, add_ctxtnav
+        add_stylesheet, add_link, add_warning, add_notice, add_ctxtnav, prevnext_nav
 from trac.wiki.formatter import format_to_oneliner, format_to_html
 
 # Imports from same package
@@ -191,6 +191,13 @@ class FullBlogModule(Component):
             context = Context.from_request(req, the_post.resource)
             data['context'] = context
             data['blog_attachments'] = AttachmentModule(self.env).attachment_data(context)
+            # Previous and Next ctxtnav
+            prev, next = blog_core.get_prev_next_posts(req.perm, the_post.name)
+            if prev:
+                add_link(req, 'prev', req.href.blog(prev), prev)
+            if next:
+                add_link(req, 'next', req.href.blog(next), next)
+            prevnext_nav(req, 'Post')
 
         elif command in ['create', 'edit']:
             template = 'fullblog_edit.html'
@@ -330,15 +337,15 @@ class FullBlogModule(Component):
         if (not command or command == 'listing') and format == 'rss':
             data['context'] = Context.from_request(req, absurls=True)
             return 'fullblog.rss', data, 'application/rss+xml'
-        else:
-            data['blog_months'], data['blog_authors'], data['blog_categories'], \
-                    data['blog_total'] = get_months_authors_categories(self.env)
-            if 'BLOG_CREATE' in req.perm('blog'):
-                add_ctxtnav(req, 'New Post', href=req.href.blog('create'),
-                        title="Create new Blog Post")
-            add_stylesheet(req, 'tracfullblog/css/fullblog.css')
-            data['blog_personal_blog'] = self.env.config.getbool('fullblog',
-                                                    'personal_blog')
+
+        data['blog_months'], data['blog_authors'], data['blog_categories'], \
+                data['blog_total'] = get_months_authors_categories(self.env)
+        if 'BLOG_CREATE' in req.perm('blog'):
+            add_ctxtnav(req, 'New Post', href=req.href.blog('create'),
+                    title="Create new Blog Post")
+        add_stylesheet(req, 'tracfullblog/css/fullblog.css')
+        data['blog_personal_blog'] = self.env.config.getbool('fullblog',
+                                                'personal_blog')
         return (template, data, None)
     
     # ISearchSource methods
