@@ -183,7 +183,7 @@ class FullBlogCore(Component):
         if bp.name in self.reserved_names:
             warnings.append((req, "'%s' is a reserved name. Please change." % bp.name))
         if bp.name == self.default_pagename:
-            warning.append(('post_name', "The default page shortname must be changed."))
+            warnings.append(('post_name', "The default page shortname must be changed."))
         # Check if any plugins has objections with the contents
         fields = {
             'title': bp.title,
@@ -195,7 +195,7 @@ class FullBlogCore(Component):
             'category_list': bp.category_list}
         for manipulator in self.manipulators:
             warnings.extend(manipulator.validate_blog_post(
-                                                req, bp.name, fields))
+                            req, bp.name, bp.version, fields))
         if warnings or verify_only:
             return warnings
         # All seems well - save and notify

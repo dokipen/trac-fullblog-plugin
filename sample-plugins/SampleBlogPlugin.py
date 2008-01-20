@@ -44,7 +44,7 @@ class SampleBlogPlugin(Component):
 
     # IBlogManipulator methods
 
-    def validate_blog_post(self, req, postname, fields):
+    def validate_blog_post(self, req, postname, version, fields):
         """Validate blog post fields before they are to be inserted as new version.
         Fields is a dict of the fields needed for insert by model.BlogPost.
                 
