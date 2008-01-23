@@ -24,12 +24,12 @@ from trac.resource import Resource
 from trac.search.api import ISearchSource, shorten_result
 from trac.timeline.api import ITimelineEventProvider
 from trac.util.compat import sorted
-from trac.util.datefmt import to_datetime, to_unicode, utc, localtz
+from trac.util.datefmt import utc
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
         add_stylesheet, add_link, add_warning, add_notice, add_ctxtnav, prevnext_nav
-from trac.wiki.formatter import format_to_oneliner, format_to_html
+from trac.wiki.formatter import format_to_oneliner
 
 # Imports from same package
 from model import *

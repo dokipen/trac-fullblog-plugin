@@ -21,7 +21,7 @@ from trac.wiki.api import IWikiSyntaxProvider
 
 # Relative imports (same package)
 from api import IBlogChangeListener, IBlogManipulator
-from model import BlogPost, BlogComment, get_blog_resources
+from model import BlogPost, get_blog_resources
 
 
 class FullBlogCore(Component):

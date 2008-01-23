@@ -12,13 +12,11 @@ License: BSD
 import datetime
 from operator import itemgetter
 
-from trac.core import ExtensionPoint
 from trac.attachment import Attachment
 from trac.resource import Resource
 from trac.search import search_to_sql
 from trac.util.compat import sorted, set
-from trac.util.datefmt import to_datetime, to_timestamp, utc, localtz
-from trac.util.text import to_unicode
+from trac.util.datefmt import to_datetime, to_timestamp, utc
 
 __all__ = ['BlogComment', 'BlogPost', 'get_months_authors_categories',
            'search_blog_posts', 'search_blog_comments',

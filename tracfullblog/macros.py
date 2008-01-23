@@ -10,7 +10,6 @@ License: BSD
 from genshi.builder import tag
 
 from trac.core import TracError
-from trac.util.datefmt import to_datetime, utc, format_datetime
 from trac.web.chrome import add_stylesheet, Chrome
 from trac.wiki.api import parse_args
 from trac.wiki.macros import WikiMacroBase

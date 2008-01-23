@@ -56,4 +56,4 @@ class FullBlogAdminPanel(Component):
                                             'fullblog', 'num_items_front')
         
         return ('fullblog_admin.html', {'blog_admin': blog_admin})
-        
+

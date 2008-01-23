@@ -10,7 +10,7 @@ License: BSD
 import datetime
 import calendar
 
-from trac.util.datefmt import to_datetime, utc
+from trac.util.datefmt import utc
 
 
 def add_months(thedate, months):

@@ -10,7 +10,6 @@ License: BSD
 from trac.core import *
 from tractags.api import ITagProvider
 from trac.util.compat import set
-from trac.util.text import to_unicode
 from trac.resource import Resource
 from model import BlogPost, _parse_categories
 
