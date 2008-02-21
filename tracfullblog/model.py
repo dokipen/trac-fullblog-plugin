@@ -381,8 +381,8 @@ class BlogPost(object):
                     'version': 0, # auto
                     'title': u'', # required
                     'body': u'',  # required
-                    'publish_time': datetime.datetime.now(utc),  # now
-                    'version_time': datetime.datetime.now(utc),  # now
+                    'publish_time': datetime.datetime.now(utc),  # auto
+                    'version_time': datetime.datetime.now(utc),  # auto
                     'version_comment': u'',
                     'version_author': u'',  # required
                     'author': u'',          # required
@@ -395,7 +395,11 @@ class BlogPost(object):
         self.env = env
         # Expand the default values as object properties
         for prop in self._db_default_fields.keys():
-            setattr(self, prop, self._db_default_fields[prop])
+            if isinstance(self._db_default_fields[prop], datetime.datetime):
+                # Default will evaluate to initial loading of the class itself
+                setattr(self, prop, datetime.datetime.now(utc))
+            else:
+                setattr(self, prop, self._db_default_fields[prop])
         self.name = name
         self._load_post(version)
         

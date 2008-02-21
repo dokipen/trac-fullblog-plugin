@@ -13,7 +13,7 @@
     </div>
     <ul class="metainfo">
       <li class="metadates">Posted: ${format_datetime(post.publish_time, '%Y-%m-%d %H:%M')}
-        <span class="metaupdated">
+        <span class="metaupdated" py:if="len(post.versions) > 1">
           (Updated: ${format_datetime(post.version_time, '%Y-%m-%d %H:%M')})
         </span>
       </li>
