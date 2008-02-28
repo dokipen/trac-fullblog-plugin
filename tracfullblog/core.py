@@ -17,6 +17,7 @@ from trac.core import *
 from trac.config import IntOption
 from trac.perm import IPermissionRequestor
 from trac.resource import IResourceManager
+from trac.util.text import unicode_unquote
 from trac.wiki.api import IWikiSyntaxProvider
 
 # Relative imports (same package)
@@ -107,20 +108,23 @@ class FullBlogCore(Component):
     def get_link_resolvers(self):
         yield ('blog', self._bloglink_formatter)
     
-    def _bloglink_formatter(self, formatter, ns, object, label):
-        object = (object.startswith('/') and object[1:]) or object
-        if not object:
-            return tag.a(label, href=formatter.href.blog(object))
-        if object[:3].isdigit() and object[4] == '/':
+    def _bloglink_formatter(self, formatter, ns, content, label):
+        content = (content.startswith('/') and content[1:]) or content
+        if not content:
+            return tag.a(label, href=formatter.href.blog(content))
+        if content[:3].isdigit() and content[4] == '/':
             # Requesting a period listing
-            return tag.a(label, href=formatter.href.blog(object))
+            return tag.a(label, href=formatter.href.blog(content))
         elif [item for item in self.reserved_names if (
-                    object == item or object.startswith(item+'/'))]:
+                    content == item or content.startswith(item+'/'))]:
             # Requesting a specific path to command or listing
-            return tag.a(label, href=formatter.href.blog(object))
+            return tag.a(label, href=formatter.href.blog(content))
         else:
             # Assume it is a regular post, and pass to 'view'
-            return tag.a(label, href=formatter.href.blog(object))
+            # Split for comment linking (the_post#comment-1, or #comment-1)
+            url, anchor = unicode_unquote(content).split('#')
+            return tag.a(label, href=(url and formatter.href.blog(url) or '') \
+                    + (anchor and '#' + anchor or ''))
 
     # Utility methods used by other modules
     
