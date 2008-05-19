@@ -11,6 +11,7 @@ import datetime
 import calendar
 
 from trac.util.datefmt import utc
+from trac.util.text import to_unicode
 
 
 def add_months(thedate, months):
@@ -26,7 +27,7 @@ def map_month_names(month_list):
         return month_list
     else:
         # Use list from default locale setting
-        return [calendar.month_name[i+1] for i in range(12)]
+        return [to_unicode(calendar.month_name[i+1]) for i in range(12)]
 
 def parse_period(items=[]):
     """ Parses a list of items for elements of dates, and returns
