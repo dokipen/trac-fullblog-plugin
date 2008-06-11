@@ -12,7 +12,7 @@ License: BSD
 import datetime
 import re
 from pkg_resources import resource_filename
-from operator import itemgetter
+from trac.util.compat import itemgetter
 
 # Trac and Genshi imports
 from genshi.builder import tag

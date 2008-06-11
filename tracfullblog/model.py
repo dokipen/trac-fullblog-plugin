@@ -10,7 +10,7 @@ License: BSD
 """
 
 import datetime
-from operator import itemgetter
+from trac.util.compat import itemgetter
 
 from trac.attachment import Attachment
 from trac.resource import Resource
@@ -147,8 +147,7 @@ def get_blog_comments(env, post_name='', from_dt=None, to_dt=None):
         (post_name, number, comment, author, time) 
     Instantiate BlogComment objects to get further details of each.
     Example of sorting the output by time, newest first:
-        from trac.util.compat import sorted
-        from operator import itemgetter
+        from trac.util.compat import sorted, itemgetter
         comments = get_blog_comments(env)
         sorted(comments, key=itemgetter(4), reverse=True) """
 
