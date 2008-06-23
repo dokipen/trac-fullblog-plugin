@@ -10,7 +10,9 @@ License: BSD
 from trac.core import *
 from tractags.api import ITagProvider
 from trac.util.compat import set
-from trac.resource import Resource
+from trac.resource import Resource, get_resource_description
+from trac.web.chrome import Chrome
+
 from model import BlogPost, _parse_categories
 
 
@@ -78,3 +80,10 @@ class FullBlogTagSystem(Component):
             req.perm(resource).require('BLOG_MODIFY_ALL')
         post.categories = ""
         post.save(req.authname, 'Blog post categories removed via Tags plugin.')
+
+    def describe_tagged_resource(self, req, resource):
+        # The plugin already uses the title as main description
+        post = BlogPost(self.env, resource.id)
+        chrome = Chrome(self.env)
+        return "'" + resource.id + "' by " \
+                                    + chrome.format_author(req, post.author)
