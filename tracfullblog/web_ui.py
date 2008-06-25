@@ -222,8 +222,9 @@ class FullBlogModule(Component):
                 # Input verifications and warnings
                 warnings = []
                 if command == 'create' and the_post.version:
-                    warning.append(
-                            ('', "A post named '%s' already exists. " % the_post.name))
+                    warnings.append(
+                            ('', "A post named '%s' already exists. Reverting to default name."
+                                            % the_post.name))
                     the_post = BlogPost(self.env, default_pagename)
                 orig_author = the_post.author
                 if not the_post.update_fields(req.args):
