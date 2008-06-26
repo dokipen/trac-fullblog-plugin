@@ -38,6 +38,8 @@ class FullBlogAdminPanel(Component):
             if req.args.get('savesettings'):
                 self.env.config.set('fullblog', 'num_items_front',
                     req.args.get('numpostsfront'))
+                self.env.config.set('fullblog', 'default_postname',
+                    req.args.get('defaultpostname'))
                 self.env.config.save()
             elif req.args.get('savebloginfotext'):
                 self.env.log.debug("New blog info text = %r" % req.args.get('bloginfotext'))
@@ -54,6 +56,8 @@ class FullBlogAdminPanel(Component):
         blog_admin['bloginfotext'] = blog_core.get_bloginfotext()
         blog_admin['numpostsfront'] = self.env.config.getint(
                                             'fullblog', 'num_items_front')
+        blog_admin['defaultpostname'] = self.env.config.get(
+                                            'fullblog', 'default_postname')
         
         return ('fullblog_admin.html', {'blog_admin': blog_admin})
 

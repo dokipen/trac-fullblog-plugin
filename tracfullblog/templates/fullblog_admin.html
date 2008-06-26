@@ -21,9 +21,16 @@
        <fieldset>
         <legend>Blog Settings:</legend>
         <div class="field">
-         <label for="numpostsfront">Number of posts on front page:
-           <input type="text" name="numpostsfront"
+         <label for="numpostsfront">Number of posts on front page:<br />
+           <input type="text" size="10" name="numpostsfront"
                               value="${blog_admin.numpostsfront}" />
+         </label>
+        </div>
+        <div class="field">
+         <label for="defaultpostname">Template for naming new blog posts:<br />
+                (username and time substitution available, like <tt>${'$USER'}-%Y/%m/%d/my_topic</tt>)<br />
+           <input type="text" size="35" name="defaultpostname"
+                              value="${blog_admin.defaultpostname}" />
          </label>
         </div>
         <div class="buttons">

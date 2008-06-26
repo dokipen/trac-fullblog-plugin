@@ -12,18 +12,17 @@ License: BSD
 import datetime
 import re
 from pkg_resources import resource_filename
-from trac.util.compat import itemgetter
 
 # Trac and Genshi imports
 from genshi.builder import tag
 from trac.attachment import AttachmentModule
-from trac.config import ListOption, BoolOption
+from trac.config import ListOption, BoolOption, IntOption
 from trac.core import *
 from trac.mimeview.api import Context
 from trac.resource import Resource
 from trac.search.api import ISearchSource, shorten_result
 from trac.timeline.api import ITimelineEventProvider
-from trac.util.compat import sorted
+from trac.util.compat import sorted, itemgetter
 from trac.util.datefmt import utc
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
@@ -45,15 +44,22 @@ class FullBlogModule(Component):
                ISearchSource, ITimelineEventProvider,
                ITemplateProvider)
 
+    # Options
+    
     ListOption('fullblog', 'month_names',
         doc = """Ability to specify a list of month names for display in groupings.
         If empty it will make a list from default locale setting.
         Enter list of 12 months like:
         `month_names = January, February, ..., December` """)
+
     BoolOption('fullblog', 'personal_blog', False,
         """When using the Blog as a personal blog (only one author), setting to 'True'
         will disable the display of 'Browse by author:' in sidebar, and also removes
         various author links and references. """)
+
+    IntOption('fullblog', 'num_items_front', 20,
+        """Option to specify how many recent posts to display on the
+        front page of the Blog.""")
 
     # INavigationContributor methods
     
@@ -89,35 +95,16 @@ class FullBlogModule(Component):
         """ Processing the request. """
 
         blog_core = FullBlogCore(self.env)
-        default_pagename = blog_core.default_pagename
-        reserved_names = blog_core.reserved_names
-
         format = req.args.get('format', '').lower()
-        
-        # Parse out the path and actions from args
-        path_items = req.args.get('blog_path', '').split('/')
-        path_items = [item for item in path_items if item] # clean out empties
+
+        command, pagename, path_items, listing_data = self._parse_path(req)
         action = req.args.get('action', 'view').lower()
         try:
             version = int(req.args.get('version', 0))
         except:
             version = 0
-        command = pagename = ''
-        command = (len(path_items) and path_items[0]) or ''
-        if command.lower() in [u'view', u'edit', 'delete'] and len(path_items) == 2:
-            pagename = path_items[1]
-        if command and command not in [
-                'view', 'edit', 'create', 'archive', 'delete']:
-            if len(path_items) == 1:
-                # Assume it is a request for a specific post
-                pagename = command
-                command = 'view'
-            else:
-                # Assume it is a listing, do further parsing later
-                command = 'listing'
 
         data = {}
-
         template = 'fullblog_view.html'
         data['blog_about'] = BlogPost(self.env, 'about')
         data['blog_infotext'] = blog_core.get_bloginfotext()
@@ -201,8 +188,21 @@ class FullBlogModule(Component):
 
         elif command in ['create', 'edit']:
             template = 'fullblog_edit.html'
-            pagename = pagename or req.args.get('name','') or default_pagename
-            the_post = BlogPost(self.env, pagename)
+            default_pagename = blog_core._get_default_postname(req.authname)
+            the_post = BlogPost(self.env, pagename or default_pagename)
+            warnings = []
+
+            if command == 'create' and the_post.version:
+                if 'BLOG_CREATE' in req.perm and the_post.name == default_pagename \
+                                    and not req.method == 'POST':
+                    if default_pagename:
+                        add_notice(req, "Suggestion for new name already exists "
+                            "('%s'). Please make a new name." % the_post.name)
+                elif pagename:
+                    warnings.append(
+                        ('', "A post named '%s' already exists. Enter new name."
+                                            % the_post.name))
+                the_post = BlogPost(self.env, '')
             if command == 'edit':
                 req.perm(the_post.resource).require('BLOG_VIEW') # Starting point
             if req.method == 'POST':   # Create or edit a blog post
@@ -219,13 +219,8 @@ class FullBlogModule(Component):
                         req.perm(the_post.resource).require('BLOG_MODIFY_OWN')
                     else:
                         req.perm(the_post.resource).require('BLOG_MODIFY_ALL')
-                # Input verifications and warnings
-                warnings = []
-                if command == 'create' and the_post.version:
-                    warnings.append(
-                            ('', "A post named '%s' already exists. Reverting to default name."
-                                            % the_post.name))
-                    the_post = BlogPost(self.env, default_pagename)
+
+                # Check input
                 orig_author = the_post.author
                 if not the_post.update_fields(req.args):
                     warnings.append(('', "None of the fields have changed."))
@@ -248,11 +243,11 @@ class FullBlogModule(Component):
                     add_notice(req, "If you change the author you cannot " \
                         "edit the post again due to restricted permissions.")
                     data['blog_orig_author'] = orig_author
-                for field, reason in warnings:
-                    if field:
-                        add_warning(req, "Field '%s': %s" % (field, reason))
-                    else:
-                        add_warning(req, reason)                        
+            for field, reason in warnings:
+                if field:
+                    add_warning(req, "Field '%s': %s" % (field, reason))
+                else:
+                    add_warning(req, reason)
             data['blog_edit'] = the_post
 
         elif command == 'delete':
@@ -300,28 +295,30 @@ class FullBlogModule(Component):
                 else:
                     add_warning(req, reason)                        
 
-        elif command == 'listing':
+        elif command.startswith('listing-'):
             # 2007/10 or category/something or author/theuser
             title = category = author = ''
-            from_dt, to_dt = parse_period(path_items)
-            if from_dt:
+            from_dt = to_dt = None
+            if command == 'listing-month':
+                from_dt = listing_data['from_dt']
+                to_dt = listing_data['to_dt']
                 title = "Posts for the month of %s %d" % (
                         blog_month_names[from_dt.month -1], from_dt.year)
                 add_link(req, 'alternate', req.href.blog(format='rss'), 'RSS Feed',
                         'application/rss+xml', 'rss')
 
-            category = (path_items[0].lower() == 'category'
-                        and path_items[1]) or ''
-            if category:
-                title = "Posts in category %s" % category
-                add_link(req, 'alternate', req.href.blog('category', category, format='rss'),
-                    'RSS Feed', 'application/rss+xml', 'rss')
-            author = (path_items[0].lower() == 'author'
-                        and path_items[1]) or ''
-            if author:
-                title = "Posts by author %s" % author
-                add_link(req, 'alternate', req.href.blog('author', author, format='rss'),
-                    'RSS Feed', 'application/rss+xml', 'rss')
+            elif command == 'listing-category':
+                category = listing_data['category']
+                if category:
+                    title = "Posts in category %s" % category
+                    add_link(req, 'alternate', req.href.blog('category', category,
+                        format='rss'), 'RSS Feed', 'application/rss+xml', 'rss')
+            elif command == 'listing-author':
+                author = listing_data['author']
+                if author:
+                    title = "Posts by author %s" % author
+                    add_link(req, 'alternate', req.href.blog('author', author,
+                        format='rss'), 'RSS Feed', 'application/rss+xml', 'rss')
             if not (author or category or (from_dt and to_dt)):
                 raise HTTPNotFound("Not a valid path for viewing blog posts.")
             blog_posts = []
@@ -335,7 +332,7 @@ class FullBlogModule(Component):
         else:
             raise HTTPNotFound("Not a valid blog path.")
 
-        if (not command or command == 'listing') and format == 'rss':
+        if (not command or command.startswith('listing-')) and format == 'rss':
             data['context'] = Context.from_request(req, absurls=True)
             return 'fullblog.rss', data, 'application/rss+xml'
 
@@ -466,3 +463,39 @@ class FullBlogModule(Component):
     def get_templates_dirs(self):
         """ Location of Trac templates provided by plugin. """
         return [resource_filename('tracfullblog', 'templates')]
+
+    # Internal methods
+
+    def _parse_path(self, req):
+        """ Parses the request path for the blog and returns a
+        ('command', 'pagename', 'path_items', 'listing_data') tuple. """
+        # Parse out the path and actions from args
+        path = req.args.get('blog_path', '')
+        path_items = path.split('/')
+        path_items = [item for item in path_items if item] # clean out empties
+        command = pagename = ''
+        listing_data = {}
+        from_dt, to_dt = parse_period(path_items)
+        if not path_items:
+            pass # emtpy default for return is fine
+        elif len(path_items) > 1 and path_items[0].lower() in ['view', 'edit', 'delete']:
+            command = path_items[0].lower()
+            pagename = '/'.join(path_items[1:])
+        elif len(path_items) == 1 and path_items[0].lower() == 'archive':
+            command = path_items[0].lower()
+        elif len(path_items) >= 1 and path_items[0].lower() == 'create':
+            command = path_items[0].lower()
+            pagename = req.args.get('name','') or (len(path_items) > 1 \
+                                                    and '/'.join(path_items[1:]))
+        elif len(path_items) > 1 and path_items[0].lower() in ['author', 'category']:
+            command = 'listing' + '-' + path_items[0].lower()
+            listing_data[path_items[0].lower()] = '/'.join(path_items[1:])
+        elif len(path_items) == 2 and (from_dt, to_dt) != (None, None):
+            command = 'listing-month'
+            listing_data['from_dt'] = from_dt
+            listing_data['to_dt'] = to_dt
+        else:
+            # A request for a regular page
+            command = 'view'
+            pagename = path
+        return (command, pagename, path_items, listing_data)

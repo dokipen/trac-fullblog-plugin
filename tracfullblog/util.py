@@ -32,7 +32,7 @@ def map_month_names(month_list):
 def parse_period(items=[]):
     """ Parses a list of items for elements of dates, and returns
     a month as (from_dt, to_dt) if valid. (None, None) if not. """
-    if not len(items) >= 2:
+    if not len(items) == 2:
         return None, None
     try:
         # Test for year and month values

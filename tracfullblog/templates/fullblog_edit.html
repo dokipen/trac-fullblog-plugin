@@ -16,19 +16,35 @@
 
     <div id="content" class="blog wiki">
       
+    <py:with vars="is_create = not blog_edit.version;
+                   can_create = 'BLOG_CREATE' in perm('blog');
+                   is_edit = bool(blog_edit.version);
+                   can_edit = 'BLOG_MODIFY_ALL' in perm(blog_edit.resource) or defined(
+                        'blog_orig_author') or (
+                        perm.username==blog_edit.author and 'BLOG_MODIFY_OWN' in perm(blog_edit.resource));
+                   is_allowed = (is_create and can_create) or (is_edit and can_edit);
+                  ">
+
+      <div py:if="is_create and can_create" id="sidebar">
+        <p><em>Naming your blog posts.</em></p>
+        <p>When naming your posts (post shortname), it is recommended to make them URL friendly
+          (for instance avoid spaces).</p>
+        <p>Blog posts can also be referenced with <tt>[blog:postname]</tt> wiki link syntax,
+          so you may not want to make them too hard to read or write.</p>
+        <p>Some names are reserved and not allowed:</p>
+        <ul>
+          <li>'view', 'create', 'edit', 'archive', 'delete', 'category', 'author' -
+            either on their own or as first item in a path.</li>
+          <li>Numbers evaluating to N/M are seen as time periods and
+            used for month-based browsing.</li>
+        </ul>
+      </div>
+
       <div id="main">
       
         <h1 py:if="not blog_edit.version">Create Blog Post</h1>
         <h1 py:if="blog_edit.version">Edit Blog Post</h1>
 
-        <py:with vars="is_create = not blog_edit.version;
-                       can_create = 'BLOG_CREATE' in perm('blog');
-                       is_edit = bool(blog_edit.version);
-                       can_edit = 'BLOG_MODIFY_ALL' in perm(blog_edit.resource) or defined(
-                            'blog_orig_author') or (
-                            perm.username==blog_edit.author and 'BLOG_MODIFY_OWN' in perm(blog_edit.resource));
-                       is_allowed = (is_create and can_create) or (is_edit and can_edit);
-                      ">
           <div py:if="not is_allowed" class="system-message">You do not have the required permission to
               ${is_create and 'create a blog post' or 'edit this blog post'}.</div>
           <form py:if="is_allowed"
@@ -100,10 +116,10 @@
               <script type="text/javascript" src="${chrome.htdocs_location}js/wikitoolbar.js" />
             </fieldset>
           </form>
-        </py:with>
 
       </div>
 
+    </py:with>
     </div>
 
   </body>

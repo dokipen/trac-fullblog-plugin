@@ -10,20 +10,23 @@ License: BSD
 (c) 2007 ::: www.CodeResort.com - BV Network AS (simon-code@bvnetwork.no)
 """
 
+from time import strftime
+
 from genshi.builder import tag
 
 from trac.attachment import ILegacyAttachmentPolicyDelegate
 from trac.core import *
-from trac.config import IntOption
+from trac.config import Option
 from trac.perm import IPermissionRequestor
 from trac.resource import IResourceManager
 from trac.util.text import unicode_unquote
+from trac.util.datefmt import to_datetime, utc
 from trac.wiki.api import IWikiSyntaxProvider
 
 # Relative imports (same package)
 from api import IBlogChangeListener, IBlogManipulator
 from model import BlogPost, get_blog_resources
-
+from util import parse_period
 
 class FullBlogCore(Component):
     """ Module implementing features that are common and shared
@@ -34,18 +37,21 @@ class FullBlogCore(Component):
     listeners = ExtensionPoint(IBlogChangeListener)
     manipulators = ExtensionPoint(IBlogManipulator)
     
-    # Options
-    
-    IntOption('fullblog', 'num_items_front', 20,
-        """Option to specify how many recent posts to display on the
-        front page of the Blog.""")
-
-    default_pagename = 'change_this_post_shortname'
-    reserved_names = ['create', 'view', 'edit', 'delete',
-                    'archive', 'category', 'author']
-    
     implements(IPermissionRequestor, IWikiSyntaxProvider, IResourceManager,
             ILegacyAttachmentPolicyDelegate)
+
+    # Options
+
+    Option('fullblog', 'default_postname', '%Y/%m/%d/my_topic',
+        """Option for a default naming scheme for new posts. The string
+        can include substitution markers for time (UTC) and user: %Y=year,
+        %m=month, %d=day, %H=hour, %M=minute, %S=second, $USER.
+        Example template string: `%Y/%m/%d/my_topic`""")
+
+    # Constants
+
+    reserved_names = ['create', 'view', 'edit', 'delete',
+                    'archive', 'category', 'author']
 
     # IPermissionRequestor method
     
@@ -188,11 +194,8 @@ class FullBlogCore(Component):
         warnings = []
         # Do basic checking for content existence
         warnings.extend(bp.save(version_author, version_comment, verify_only=True))
-        # Do some more fundamental checking
-        if bp.name in self.reserved_names:
-            warnings.append((req, "'%s' is a reserved name. Please change." % bp.name))
-        if bp.name == self.default_pagename:
-            warnings.append(('post_name', "The default page shortname must be changed."))
+        # Make sure name for the post is a valid name
+        warnings.extend(self._check_new_postname(req, bp.name))
         # Check if any plugins has objections with the contents
         fields = {
             'title': bp.title,
@@ -276,4 +279,44 @@ class FullBlogCore(Component):
                         fields['post_name'], fields['number'], fields)
         else:
             warnings.append(('', "Unknown error. Not deleted."))
+        return warnings
+
+    # Internal methods
+    
+    def _get_default_postname(self, user=''):
+        """ Parses and returns the setting for default_postname. """
+        opt = self.env.config.get('fullblog', 'default_postname')
+        if not opt:
+            return ''
+        # Perform substitutions
+        try:
+            now = to_datetime(None, utc).timetuple()
+            name = strftime(opt, now)
+            name = name.replace('$USER', user)
+            return name
+        except:
+            self.env.log.debug(
+                "FullBlog: Error parsing default_postname option: %s" % opt)
+            return ''
+
+    def _check_new_postname(self, req, name):
+        """ Does some checking on the postname to make sure it does
+        not conflict with existing commands. """
+        warnings = []
+        name = name.lower()
+        # Reserved names
+        for rn in self.reserved_names:
+            if name == rn:
+                warnings.append(('',
+                    "'%s' is a reserved name. Please change." % name))
+            if name.startswith(rn + '/'):
+                warnings.append(('',
+                    "Name cannot start with a reserved name as first item in "
+                    "path ('%s'). Please change." % rn))
+        # Check to see if it is a date range
+        items = name.split('/')
+        if len(items) == 2 and parse_period(items) != (None, None):
+            warnings.append(('',
+                "'%s' is seen as a time period, and cannot "
+                "be used as a name. Please change." % name))        
         return warnings
