@@ -38,8 +38,12 @@ class BlogSpamFilterAdapter(Component):
             last_post_fields = {}
 
         field_names = set(fields).union(last_post_fields)
-        changes = [(to_unicode(last_post_fields.get(k, '')),
-                    to_unicode(fields.get(k, '')))]
+        changes = []
+        for field in field_names:
+            old = to_unicode(last_post_fields.get(field, ''))
+            new = to_unicode(fields.get(field, ''))
+            if new and old != new:
+                changes.append((old, new))
         author = fields.get('author', '')
         FilterSystem(self.env).test(req, author, changes)
         return []
