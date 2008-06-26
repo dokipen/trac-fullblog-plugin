@@ -192,7 +192,11 @@ class FullBlogModule(Component):
             the_post = BlogPost(self.env, pagename or default_pagename)
             warnings = []
 
+            if command == 'create' and req.method == 'GET' and not the_post.version:
+                # Support appending query arguments for populating intial fields
+                the_post.update_fields(req.args)
             if command == 'create' and the_post.version:
+                # Post with name or suggested name already exists
                 if 'BLOG_CREATE' in req.perm and the_post.name == default_pagename \
                                     and not req.method == 'POST':
                     if default_pagename:
@@ -205,7 +209,8 @@ class FullBlogModule(Component):
                 the_post = BlogPost(self.env, '')
             if command == 'edit':
                 req.perm(the_post.resource).require('BLOG_VIEW') # Starting point
-            if req.method == 'POST':   # Create or edit a blog post
+            if req.method == 'POST':
+                # Create or edit a blog post
                 if 'blog-cancel' in req.args:
                     if req.args.get('action','') == 'edit':
                         req.redirect(req.href.blog(pagename))
