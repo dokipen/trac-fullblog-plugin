@@ -26,18 +26,19 @@
                   ">
 
       <div py:if="is_create and can_create" id="sidebar">
-        <p><em>Naming your blog posts.</em></p>
+        <h4>Naming your blog posts</h4>
         <p>When naming your posts (post shortname), it is recommended to make them URL friendly
           (for instance avoid spaces).</p>
         <p>Blog posts can also be referenced with <tt>[blog:postname]</tt> wiki link syntax,
           so you may not want to make them too hard to read or write.</p>
-        <p>Some names are reserved and not allowed:</p>
+        <p>Some names are reserved and not allowed - warnings will appear:</p>
         <ul>
           <li>'view', 'create', 'edit', 'archive', 'delete', 'category', 'author' -
             either on their own or as first item in a path.</li>
           <li>Numbers evaluating to N/M are seen as time periods and
             used for month-based browsing.</li>
         </ul>
+        <p>The name of a post cannot be changed later.</p>
       </div>
 
       <div id="main">
