@@ -42,7 +42,7 @@ class FullBlogCore(Component):
 
     # Options
 
-    Option('fullblog', 'default_postname', '%Y/%m/%d/my_topic',
+    Option('fullblog', 'default_postname', '',
         """Option for a default naming scheme for new posts. The string
         can include substitution markers for time (UTC) and user: %Y=year,
         %m=month, %d=day, %H=hour, %M=minute, %S=second, $USER.
