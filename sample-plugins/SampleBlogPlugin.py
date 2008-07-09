@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Sample FullBlog plugin that shows examples of how to use the interfaces.
+
+License: BSD
+
+(c) 2008 ::: www.CodeResort.com - BV Network AS (simon-code@bvnetwork.no)
+"""
 
 from trac.core import *
 from tracfullblog.api import IBlogChangeListener, IBlogManipulator

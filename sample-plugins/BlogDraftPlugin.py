@@ -36,8 +36,8 @@ class BlogDraftPlugin(Component):
     
     implements(IPermissionPolicy, IBlogManipulator)
     
-    draft = ListOption('fullblog', 'draft_category', default='draft, Draft',
-        doc="""The list of categories to be considered as draft blog posts,
+    draft = ListOption('fullblog', 'draft_categories', default='draft, Draft',
+        doc="""List of categories to be considered as draft blog posts,
         only available to the author.""")
     
     # IPermissionPolicy method
