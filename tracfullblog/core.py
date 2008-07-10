@@ -25,7 +25,7 @@ from trac.wiki.api import IWikiSyntaxProvider
 
 # Relative imports (same package)
 from api import IBlogChangeListener, IBlogManipulator
-from model import BlogPost, get_blog_resources
+from model import BlogPost, get_blog_resources, get_blog_posts
 from util import parse_period
 
 class FullBlogCore(Component):
@@ -280,6 +280,42 @@ class FullBlogCore(Component):
         else:
             warnings.append(('', "Unknown error. Not deleted."))
         return warnings
+
+    def get_months_authors_categories(self, from_dt=None, to_dt=None,
+                                                user=None, perm=None):
+        """ Returns a structure of post metadata:
+            ([ ((year1, month1), count), ((year1, month2), count) ], # newest first
+             [ (author1, count), (author2, count) ],                 # alphabetical
+             [ (category1, count), (category2, count) ],             # alphabetical
+             total)                                                  # num of posts
+        * Use 'from_dt' and 'to_dt' (datetime objects) to restrict search to
+        posts with a publish_time within the intervals (None means ignore).
+        * If user and perm is provided, the list is also filtered for permissions.
+        * Note also that it only fetches from most recent version. """
+        blog_posts = get_blog_posts(self.env, from_dt=from_dt, to_dt=to_dt)
+        a_dict = {}
+        c_dict = {}
+        m_dict = {}
+        total = 0
+        for post in blog_posts:
+            if user and perm:
+                # Check permissions
+                bp = BlogPost(self.env, post[0], post[1])
+                if not 'BLOG_VIEW' in perm(bp.resource):
+                    continue # Skip this post
+            post_time = post[2]
+            m_dict[(post_time.year, post_time.month)] = m_dict.get(
+                    (post_time.year, post_time.month), 0) + 1
+            author = post[3]
+            a_dict[author] = a_dict.get(author, 0) + 1
+            categories = post[6] # a list
+            for category in set(categories):
+                c_dict[category] = c_dict.get(category, 0) + 1
+            total += 1
+        return ([(m, m_dict.get(m, 0)) for m in sorted(m_dict.keys(), reverse=True)],
+                [(a, a_dict.get(a, 0)) for a in sorted(a_dict.keys())],
+                [(c, c_dict.get(c, 0)) for c in sorted(c_dict.keys())],
+                total)
 
     # Internal methods
     

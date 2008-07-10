@@ -139,7 +139,15 @@ class FullBlogModule(Component):
         elif command == 'archive':
             # Requesting the archive page
             template = 'fullblog_archive.html'
-            data['blog_archive'] = group_posts_by_month(get_blog_posts(self.env))
+            data['blog_archive'] = []
+            for period, period_posts in group_posts_by_month(get_blog_posts(self.env)):
+                allowed_posts = []
+                for post in period_posts:
+                    bp = BlogPost(self.env, post[0], post[1])
+                    if 'BLOG_VIEW' in req.perm(bp.resource):
+                        allowed_posts.append(post)
+                if allowed_posts:
+                    data['blog_archive'].append((period, allowed_posts))
             add_link(req, 'alternate', req.href.blog(format='rss'), 'RSS Feed',
                      'application/rss+xml', 'rss')
 
@@ -342,7 +350,9 @@ class FullBlogModule(Component):
             return 'fullblog.rss', data, 'application/rss+xml'
 
         data['blog_months'], data['blog_authors'], data['blog_categories'], \
-                data['blog_total'] = get_months_authors_categories(self.env)
+                data['blog_total'] = \
+                    blog_core.get_months_authors_categories(
+                        user=req.authname, perm=req.perm)
         if 'BLOG_CREATE' in req.perm('blog'):
             add_ctxtnav(req, 'New Post', href=req.href.blog('create'),
                     title="Create new Blog Post")

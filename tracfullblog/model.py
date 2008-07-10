@@ -18,7 +18,7 @@ from trac.search import search_to_sql
 from trac.util.compat import sorted, set
 from trac.util.datefmt import to_datetime, to_timestamp, utc
 
-__all__ = ['BlogComment', 'BlogPost', 'get_months_authors_categories',
+__all__ = ['BlogComment', 'BlogPost',
            'search_blog_posts', 'search_blog_comments',
            'get_blog_posts', 'get_blog_comments',
            'group_posts_by_month', 'get_blog_resources']
@@ -100,14 +100,6 @@ def get_blog_posts(env, category='', author='', from_dt=None, to_dt=None,
     if all_versions:
         time_field = 'bp1.version_time'
         join_operation = ""
-    elif category:
-        # Make sure we use a valid category when only latest version,
-        # if not return empty. Needed as we do LIKE and can catch all
-        # kinds of permutations of the category input text.
-        valid_categories = [cat for cat, count in
-                get_months_authors_categories(env)[2]]
-        if not category in valid_categories:
-            return [] 
     args = [category and ("bp1.categories "+cnx.like(), "%"+category+"%"),
             author and ("bp1.author=%s", author) or None,
             from_dt and (time_field+">%s", to_timestamp(from_dt)) or None,
@@ -173,35 +165,6 @@ def get_blog_comments(env, post_name='', from_dt=None, to_dt=None):
     # Return the items we have found
     return [(row[0], row[1], row[2], row[3], to_datetime(row[4], utc))
             for row in cursor]
-
-def get_months_authors_categories(env, from_dt=None, to_dt=None):
-    """ Returns a structure of post metadata:
-        ([ ((year1, month1), count), ((year1, month2), count) ], # newest first
-         [ (author1, count), (author2, count) ],                 # alphabetical
-         [ (category1, count), (category2, count) ],             # alphabetical
-         total )                                                 # num of posts
-    * Use 'from_dt' and 'to_dt' (datetime objects) to restrict search to
-    posts with a publish_time within the intervals (None means ignore).
-    * Note also that it only fetches from most recent version. """
-    blog_posts = get_blog_posts(env, from_dt=from_dt, to_dt=to_dt)
-    a_dict = {}
-    c_dict = {}
-    m_dict = {}
-    total = 0
-    for post in blog_posts:
-        post_time = post[2]
-        m_dict[(post_time.year, post_time.month)] = m_dict.get(
-                (post_time.year, post_time.month), 0) + 1
-        author = post[3]
-        a_dict[author] = a_dict.get(author, 0) + 1
-        categories = post[6] # a list
-        for category in set(categories):
-            c_dict[category] = c_dict.get(category, 0) + 1
-        total += 1
-    return ([(m, m_dict.get(m, 0)) for m in sorted(m_dict.keys(), reverse=True)],
-            [(a, a_dict.get(a, 0)) for a in sorted(a_dict.keys())],
-            [(c, c_dict.get(c, 0)) for c in sorted(c_dict.keys())],
-            total )
 
 def get_blog_resources(env):
     """ Returns a list of resource instances of existing blog posts (current
