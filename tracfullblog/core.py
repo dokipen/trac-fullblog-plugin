@@ -19,6 +19,7 @@ from trac.core import *
 from trac.config import Option
 from trac.perm import IPermissionRequestor
 from trac.resource import IResourceManager
+from trac.util.compat import sorted, set
 from trac.util.text import unicode_unquote
 from trac.util.datefmt import to_datetime, utc
 from trac.wiki.api import IWikiSyntaxProvider
