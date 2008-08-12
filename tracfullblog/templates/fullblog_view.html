@@ -31,7 +31,7 @@
             <div class="buttons">
               <form method="get" action="${href.blog('edit', blog_post.name)}">
                 <div>
-                  <input type="submit" value="${_('Edit this post')}" accesskey="e" />
+                  <input type="submit" value="${_('Edit post')}" accesskey="e" />
                 </div>
               </form>
               ${attach_file_form(blog_attachments)}
@@ -106,10 +106,10 @@
                   </div>
                 </py:if>
                 <div class="field">
+                  <input type="submit" name="previewcomment" value="Preview comment" />
                   <input size="30" type='submit' name="submitcomment"
                       value="Add comment" />
                   <input type="hidden" name="action" value="comment" />
-                  <input type="submit" name="previewcomment" value="Preview comment" />
                   <input type="submit" name="cancelcomment" value="Cancel" />
                 </div>
                 <script type="text/javascript" src="${chrome.htdocs_location}js/wikitoolbar.js" />

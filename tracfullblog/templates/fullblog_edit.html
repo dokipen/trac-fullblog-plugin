@@ -107,11 +107,11 @@
                       value="${defined('blog_version_comment') and blog_version_comment or ''}" />
               </div>
               <div class="field">
+                <input type="submit" name="blog-preview" value="Preview post" />
                 <input size="30" type='submit' name="blog-save"
-                    value="Save Post" />
+                    value="Save post" />
                 <input type="hidden" name="action"
                       value="${defined('blog_edit') and blog_edit.version and 'edit' or 'new'}" />
-                <input type="submit" name="blog-preview" value="Preview Post" />
                 <input type="submit" name="blog-cancel" value="Cancel" />
               </div>
               <script type="text/javascript" src="${chrome.htdocs_location}js/wikitoolbar.js" />
