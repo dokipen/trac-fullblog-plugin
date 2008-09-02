@@ -129,7 +129,7 @@ class FullBlogCore(Component):
         else:
             # Assume it is a regular post, and pass to 'view'
             # Split for comment linking (the_post#comment-1, or #comment-1)
-            segments = unicode_unquote(content).split('#')
+            segments = content.split('#')
             if len(segments) == 2:
                 url, anchor = segments
             else:
