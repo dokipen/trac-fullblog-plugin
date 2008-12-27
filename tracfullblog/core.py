@@ -117,13 +117,14 @@ class FullBlogCore(Component):
     
     def _bloglink_formatter(self, formatter, ns, content, label):
         content = (content.startswith('/') and content[1:]) or content
+        path_parts = [part for part in content.split('/') if part != '']
         if not content:
             return tag.a(label, href=formatter.href.blog(content))
-        if content[:3].isdigit() and content[4] == '/':
+        if len(path_parts) == 2 and path_parts[0].isdigit() \
+                                and path_parts[1].isdigit():
             # Requesting a period listing
             return tag.a(label, href=formatter.href.blog(content))
-        elif [item for item in self.reserved_names if (
-                    content == item or content.startswith(item+'/'))]:
+        elif len(path_parts) and path_parts[0] in self.reserved_names:
             # Requesting a specific path to command or listing
             return tag.a(label, href=formatter.href.blog(content))
         else:
