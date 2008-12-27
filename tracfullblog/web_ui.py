@@ -24,11 +24,12 @@ from trac.search.api import ISearchSource, shorten_result
 from trac.timeline.api import ITimelineEventProvider
 from trac.util.compat import sorted, itemgetter
 from trac.util.datefmt import utc
+from trac.util.text import shorten_line
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
         add_stylesheet, add_link, add_warning, add_notice, add_ctxtnav, prevnext_nav
-from trac.wiki.formatter import format_to_oneliner
+from trac.wiki.formatter import format_to
 
 # Imports from same package
 from model import *
@@ -448,15 +449,19 @@ class FullBlogModule(Component):
 
     def render_timeline_event(self, context, field, event):
         bp_resource, bp, bc = event[3]
+        compat_format_0_11_2 = 'oneliner'
+        if hasattr(context, '_hints'):
+             compat_format_0_11_2 = None
         if bc: # A blog comment
             if field == 'url':
                 return context.href.blog(bp.name) + '#comment-%d' % bc.number
             elif field == 'title':
                 return tag('Blog: ', tag.em(bp.title), ' comment added')
             elif field == 'description':
-                return format_to_oneliner(self.env,
-                            context(resource=bp_resource), bc.comment,
-                            shorten=True)
+                comment = compat_format_0_11_2 and shorten_line(bc.comment) \
+                            or bc.comment
+                return format_to(self.env, compat_format_0_11_2,
+                            context(resource=bp_resource), comment)
         else: # A blog post
             if field == 'url':
                 return context.href.blog(bp.name)
@@ -464,10 +469,10 @@ class FullBlogModule(Component):
                 return tag('Blog: ', tag.em(bp.title),
                         bp.version > 1 and ' edited' or ' created')
             elif field == 'description':
-                return format_to_oneliner(self.env,
-                        context(resource=bp_resource),
-                        bp.version==1 and bp.body or bp.version_comment,
-                        shorten=True)
+                comment = compat_format_0_11_2 and shorten_line(bp.version_comment) \
+                            or bp.version_comment
+                return format_to(self.env, compat_format_0_11_2,
+                        context(resource=bp_resource), comment)
 
     # ITemplateProvider methods
 
