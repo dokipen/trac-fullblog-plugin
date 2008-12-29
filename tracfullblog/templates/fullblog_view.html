@@ -7,7 +7,9 @@
   <xi:include href="layout.html" />
   <xi:include href="macros.html" />
   <head>
-    <title>Blog</title>
+    <title>Blog${defined('blog_post') and ': ' + blog_post.title \
+                or req.args.get('blog_path') and defined('blog_list_title') \
+                      and ': ' + blog_list_title}</title>
   </head>
 
   <body>
