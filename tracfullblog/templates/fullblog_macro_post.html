@@ -5,7 +5,7 @@
     <h1 class="blog-title"><a href="${req.href.blog(post.name)}"
         py:strip="not list_mode">${post.title}</a>
     </h1>
-    <div class="blog-body"
+    <div class="blog-body" xml:space="preserve"
         py:with="do_shorten = defined('blog_max_size') and len(post.body) > blog_max_size">
       ${wiki_to_html(context(post.resource), do_shorten and post.body[:blog_max_size] + ' ... ' \
           or post.body)}
