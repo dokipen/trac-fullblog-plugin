@@ -138,3 +138,19 @@ div.blogflash li.metadates {
     float: left;
 }
 
+/*
+** Adjustments for printing
+*/ 
+
+@media print {
+    .blog #blog-main {
+        width: 100%;
+    }
+    .blog #newcomment, .blog .blog-comment-delete {
+        display: none;
+    }
+    .blog #sidebar {
+        width: 0%;
+        display: none;
+    }
+}
