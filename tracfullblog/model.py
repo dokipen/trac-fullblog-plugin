@@ -362,7 +362,7 @@ class BlogPost(object):
                 setattr(self, prop, datetime.datetime.now(utc))
             else:
                 setattr(self, prop, self._db_default_fields[prop])
-        self.name = name
+        self.name = name.strip()
         self._load_post(version)
         
     def save(self, version_author, version_comment=u'', verify_only=False):
