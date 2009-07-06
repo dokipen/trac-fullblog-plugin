@@ -22,7 +22,6 @@ from trac.mimeview.api import Context
 from trac.resource import Resource
 from trac.search.api import ISearchSource, shorten_result
 from trac.timeline.api import ITimelineEventProvider
-from trac.util.compat import sorted, itemgetter
 from trac.util.datefmt import utc
 from trac.util.text import shorten_line
 from trac.util.translation import _
@@ -30,6 +29,13 @@ from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
         add_stylesheet, add_link, add_warning, add_notice, add_ctxtnav, prevnext_nav
 from trac.wiki.formatter import format_to
+
+try:
+    from trac.util.compat import itemgetter
+    from trac.util.compat import sorted, set
+except ImportError:
+    # 0.12 compat - sorted and set should already be part of Python 2.4
+    from operator import itemgetter
 
 # Imports from same package
 from model import *

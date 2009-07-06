@@ -10,13 +10,19 @@ License: BSD
 """
 
 import datetime
-from trac.util.compat import itemgetter
 
 from trac.attachment import Attachment
 from trac.resource import Resource
 from trac.search import search_to_sql
-from trac.util.compat import sorted, set
 from trac.util.datefmt import to_datetime, to_timestamp, utc
+
+try:
+    from trac.util.compat import itemgetter
+    from trac.util.compat import sorted, set
+except ImportError:
+    # 0.12 compat - sorted and set should already be part of Python 2.4
+    from operator import itemgetter
+
 
 __all__ = ['BlogComment', 'BlogPost',
            'search_blog_posts', 'search_blog_comments',
