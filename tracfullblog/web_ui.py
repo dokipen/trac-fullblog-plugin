@@ -53,20 +53,20 @@ class FullBlogModule(Component):
 
     # Options
     
-    ListOption('fullblog', 'month_names',
+    month_names = ListOption('fullblog', 'month_names',
         doc = """Ability to specify a list of month names for display in groupings.
         If empty it will make a list from default locale setting.
         Enter list of 12 months like:
         `month_names = January, February, ..., December` """)
 
-    BoolOption('fullblog', 'personal_blog', False,
+    personal_blog = BoolOption('fullblog', 'personal_blog', False,
         """When using the Blog as a personal blog (only one author), setting to 'True'
         will disable the display of 'Browse by author:' in sidebar, and also removes
         various author links and references. """)
 
-    IntOption('fullblog', 'num_items_front', 20,
+    num_items = IntOption('fullblog', 'num_items_front', 20,
         """Option to specify how many recent posts to display on the
-        front page of the Blog.""")
+        front page of the Blog (and RSS feeds).""")
 
     # INavigationContributor methods
     
@@ -356,6 +356,7 @@ class FullBlogModule(Component):
 
         if (not command or command.startswith('listing-')) and format == 'rss':
             data['context'] = Context.from_request(req, absurls=True)
+            data['blog_num_items'] = self.num_items
             return 'fullblog.rss', data, 'application/rss+xml'
 
         data['blog_months'], data['blog_authors'], data['blog_categories'], \
