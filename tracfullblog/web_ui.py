@@ -92,7 +92,7 @@ class FullBlogModule(Component):
     def match_request(self, req):
         """Return whether the handler wants to process the given request."""
         match = re.match(r'^/blog(?:/(.*)|$)', req.path_info)
-        if 'BLOG_VIEW' in req.perm('blog') and match:
+        if match:
             req.args['blog_path'] = ''
             if match.group(1):
                 req.args['blog_path'] = match.group(1)
@@ -100,6 +100,8 @@ class FullBlogModule(Component):
 
     def process_request(self, req):
         """ Processing the request. """
+
+        req.perm('blog').assert_permission('BLOG_VIEW')
 
         blog_core = FullBlogCore(self.env)
         format = req.args.get('format', '').lower()
