@@ -34,7 +34,7 @@
         <ul>
           <li py:for="month, count in blog_months">
             <a href="${req.href.blog(month[0], month[1])}"
-              >${to_unicode("%s %d" % (blog_month_names[month[1]-1], month[0]))}</a> (${count})
+              >${blog_month_names[month[1]-1]} ${month[0]}</a> (${count})
           </li>
         </ul>
       </py:if>
