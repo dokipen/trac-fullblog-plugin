@@ -288,6 +288,7 @@ class FullBlogModule(Component):
                 if req.method == 'POST' and comment and pagename:
                     warnings.extend(blog_core.delete_comment(bc))
                     if not warnings:
+                        add_notice(req, "Blog comment %d deleted." % comment)
                         req.redirect(req.href.blog(pagename))
                 template = 'fullblog_delete.html'
                 data['blog_comment'] = bc
@@ -306,9 +307,16 @@ class FullBlogModule(Component):
                                 "Cannot delete. Can only delete most recent version.")
                         warnings.extend(blog_core.delete_post(bp, version=bp.versions[-1]))
                     elif 'blog-delete' in req.args:
-                        warnings.extend(blog_core.delete_post(bp, version=0))
+                        version = 0
+                        warnings.extend(blog_core.delete_post(bp, version=version))
                     if not warnings:
-                        req.redirect(req.href.blog(pagename))
+                        if version > 1:
+                            add_notice(req, "Blog post '%s' version %d deleted." % (
+                                                pagename, version))
+                            req.redirect(req.href.blog(pagename))
+                        else:
+                            add_notice(req, "Blog post '%s' deleted." % pagename)
+                            req.redirect(req.href.blog())
                 template = 'fullblog_delete.html'
                 data['blog_post'] = bp
             for field, reason in warnings:
