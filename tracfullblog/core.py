@@ -54,6 +54,10 @@ class FullBlogCore(Component):
     reserved_names = ['create', 'view', 'edit', 'delete',
                     'archive', 'category', 'author']
 
+    def __init__(self):
+        self.env.systeminfo.append(('FullBlog',
+                __import__('tracfullblog', ['__version__']).__version__))
+
     # IPermissionRequestor method
     
     def get_permission_actions(self):
