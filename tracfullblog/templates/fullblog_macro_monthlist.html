@@ -2,7 +2,7 @@
 
   <!--! Macro to render a plain listing with header (if available) -->
   <div py:def="render_monthlist(heading, posts)" class="monthlist">
-      <h3 py:strip="not heading">${heading}</h3>
+      <h3 py:strip="not heading" id="${heading}">${heading}</h3>
       <p py:if="not posts">No blog posts.</p>
       <ul>
         <li py:for="name, version, time, author, title, body, categories in posts">

@@ -10,6 +10,11 @@
     <title>Blog${defined('blog_post') and ': ' + blog_post.title \
                 or req.args.get('blog_path') and defined('blog_list_title') \
                       and ': ' + blog_list_title}</title>
+    <script type="text/javascript">
+      jQuery(document).ready(function($) {
+        $("#content").find("h1,h2,h3,h4,h5,h6").filter("[id]").addAnchor("Link here");
+      });
+    </script>
   </head>
 
   <body>

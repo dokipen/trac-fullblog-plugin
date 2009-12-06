@@ -2,7 +2,7 @@
 
   <!--! Macro to render a post -->
   <div py:def="render_blog_post(post, list_mode=False)">
-    <h1 class="blog-title"><a href="${req.href.blog(post.name)}"
+    <h1 class="blog-title" id="${post.name}"><a href="${req.href.blog(post.name)}"
         py:strip="not list_mode">${post.title}</a>
     </h1>
     <div class="blog-body" xml:space="preserve"
