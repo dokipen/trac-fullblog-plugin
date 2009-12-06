@@ -22,6 +22,7 @@ from trac.mimeview.api import Context
 from trac.resource import Resource
 from trac.search.api import ISearchSource, shorten_result
 from trac.timeline.api import ITimelineEventProvider
+from trac.util import arity
 from trac.util.datefmt import utc
 from trac.util.text import shorten_line
 from trac.util.translation import _
@@ -201,7 +202,11 @@ class FullBlogModule(Component):
                 add_link(req, 'prev', req.href.blog(prev), prev)
             if next:
                 add_link(req, 'next', req.href.blog(next), next)
-            prevnext_nav(req, 'Post')
+            if arity(prevnext_nav) == 4:
+                # 0.12 compat following trac:changeset:8597
+                prevnext_nav(req, 'Previous Post', 'Next Post')
+            else:
+                prevnext_nav(req, 'Post')
 
         elif command in ['create', 'edit']:
             template = 'fullblog_edit.html'
